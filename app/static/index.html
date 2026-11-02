@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BHASHA SAHITA - Multilingual Government Scheme Discovery Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            saffron: '#FF671F',
+            indiaGreen: '#046A38',
+            navyBlue: '#06038D',
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- TOP HEADER -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-saffron via-white to-indiaGreen p-[2px] shadow-sm flex items-center justify-center">
+          <div class="w-full h-full bg-white rounded-[10px] flex items-center justify-center font-bold text-navyBlue text-lg">
+            BS
+          </div>
+        </div>
+        <div>
+          <h1 class="text-xl font-black tracking-tight text-slate-900 flex items-center gap-2">
+            BHASHA SAHITA <span id="brand-tag-badge" class="text-xs bg-saffron/10 text-saffron px-2 py-0.5 rounded-full font-semibold border border-saffron/20">भाषा सहिता</span>
+          </h1>
+          <p id="header-subtitle" class="text-xs text-slate-500">Multilingual Scheme Discovery & Verified Eligibility Engine</p>
+        </div>
+      </div>
+
+      <!-- 6-LANGUAGE SWITCHER BUTTONS -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-medium border border-slate-200 shadow-inner">
+        <button onclick="setLanguage('en')" id="lang-en" class="px-2.5 py-1.5 rounded-lg transition-all bg-white text-blue-700 shadow-sm font-bold">English</button>
+        <button onclick="setLanguage('hi')" id="lang-hi" class="px-2.5 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">हिन्दी</button>
+        <button onclick="setLanguage('mr')" id="lang-mr" class="px-2.5 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">मराठी</button>
+        <button onclick="setLanguage('pa')" id="lang-pa" class="px-2.5 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">ਪੰਜਾਬੀ</button>
+        <button onclick="setLanguage('te')" id="lang-te" class="px-2.5 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">తెలుగు</button>
+        <button onclick="setLanguage('bn')" id="lang-bn" class="px-2.5 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">বাংলা</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SEARCH SECTION -->
+  <section class="bg-gradient-to-b from-blue-50/50 via-slate-50 to-slate-50 py-8 px-4 border-b border-slate-200/60">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs px-3 py-1 rounded-full font-medium border border-emerald-200 mb-4 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="hero-badge-text">100 Verified Central & State Schemes Across India</span>
+      </div>
+      <h2 id="hero-title" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">
+        Discover Government Schemes You Are Eligible For
+      </h2>
+      <p id="hero-sub" class="text-slate-600 text-sm max-w-2xl mx-auto mb-6">
+        Search in your regional language. Rule-based eligibility checking with source-grounded answers.
+      </p>
+
+      <!-- SEARCH INPUT BOX -->
+      <div class="relative max-w-3xl mx-auto shadow-lg rounded-2xl">
+        <div class="flex items-center bg-white rounded-2xl border-2 border-slate-200 focus-within:border-blue-500 transition-all p-1.5">
+          <div class="pl-4 pr-2 text-slate-400">
+            <i class="fa-solid fa-magnifying-glass text-lg"></i>
+          </div>
+          <input 
+            type="text" 
+            id="search-query" 
+            placeholder="Search schemes: 'farmer loan with subsidy', 'स्कॉलरशिप चाहिए', 'महिलांसाठी योजना'..." 
+            class="w-full py-2.5 text-slate-800 text-sm sm:text-base focus:outline-none bg-transparent"
+            onkeydown="if(event.key === 'Enter') executeSearch()"
+          />
+          <button 
+            onclick="executeSearch()" 
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2">
+            <span id="search-btn-text">Search</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- QUICK PROMPT CHIPS -->
+      <div class="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs" id="quick-prompts-container">
+        <!-- Rendered dynamically by language -->
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORY CARDS -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 id="category-section-title" class="font-bold text-slate-900 text-base flex items-center gap-2">
+        <i class="fa-solid fa-layer-group text-blue-600"></i> Explore By Category
+      </h3>
+      <button onclick="clearCategoryFilter()" id="clear-cat-btn" class="text-xs text-blue-600 hover:underline font-medium">Show All Categories</button>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3" id="category-cards">
+      <!-- Generated via JS -->
+    </div>
+  </section>
+
+  <!-- MAIN APP CONTENT & 10 FILTERS -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+      <!-- LEFT SIDEBAR: 10 FILTERS -->
+      <aside class="lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm h-fit space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h4 id="filter-heading" class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-blue-600"></i> 10 Filter Controls
+          </h4>
+          <button onclick="resetFilters()" id="filter-reset-btn" class="text-xs text-rose-600 hover:underline font-medium">Reset</button>
+        </div>
+
+        <!-- 1. Category -->
+        <div>
+          <label id="lbl-category" class="block text-xs font-semibold text-slate-700 mb-1">1. Category</label>
+          <select id="filter-category" onchange="onCategorySelectChange()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 2. Government Level -->
+        <div>
+          <label id="lbl-level" class="block text-xs font-semibold text-slate-700 mb-1">2. Government Level</label>
+          <select id="filter-level" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 3. State -->
+        <div>
+          <label id="lbl-state" class="block text-xs font-semibold text-slate-700 mb-1">3. State / UT</label>
+          <select id="filter-state" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 4. Beneficiary -->
+        <div>
+          <label id="lbl-beneficiary" class="block text-xs font-semibold text-slate-700 mb-1">4. Beneficiary Group</label>
+          <select id="filter-beneficiary" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 5. Age Group -->
+        <div>
+          <label id="lbl-age-group" class="block text-xs font-semibold text-slate-700 mb-1">5. Age Group</label>
+          <select id="filter-age-group" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 6. Family Income Ceiling -->
+        <div>
+          <label id="lbl-income" class="block text-xs font-semibold text-slate-700 mb-1">6. Max Family Income (₹)</label>
+          <select id="filter-income" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 7. Social Category -->
+        <div>
+          <label id="lbl-social" class="block text-xs font-semibold text-slate-700 mb-1">7. Social Category</label>
+          <select id="filter-social" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 8. Benefit Type -->
+        <div>
+          <label id="lbl-benefit-type" class="block text-xs font-semibold text-slate-700 mb-1">8. Benefit Type</label>
+          <select id="filter-benefit-type" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 9. Application Status -->
+        <div>
+          <label id="lbl-status" class="block text-xs font-semibold text-slate-700 mb-1">9. Application Status</label>
+          <select id="filter-status" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+
+        <!-- 10. Sort Option -->
+        <div>
+          <label id="lbl-sort" class="block text-xs font-semibold text-slate-700 mb-1">10. Sort By</label>
+          <select id="filter-sort" onchange="executeSearch()" class="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+            <!-- options populated via JS -->
+          </select>
+        </div>
+      </aside>
+
+      <!-- RIGHT COLUMN: SCHEME RESULTS -->
+      <section class="lg:col-span-3 space-y-4">
+        <!-- SEARCH META BAR -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-600 shadow-sm">
+          <div id="results-count" class="font-medium">
+            Showing schemes...
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="detected-lang-pill" class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-semibold border border-blue-200">
+              Language: English
+            </span>
+          </div>
+        </div>
+
+        <!-- SCHEME CARDS CONTAINER -->
+        <div id="schemes-container" class="space-y-4">
+          <!-- Populated by JavaScript -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- AI EXPLANATION MODAL -->
+  <div id="explain-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id="modal-scheme-title" class="font-bold text-lg text-slate-900">Scheme Explanation</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <div id="modal-content" class="text-sm text-slate-700 space-y-3 leading-relaxed">
+        <!-- Modal body -->
+      </div>
+      <div class="border-t border-slate-100 pt-3 flex justify-end">
+        <button onclick="closeModal()" id="modal-close-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 mt-12">
+    <p id="footer-text" class="font-medium">BHASHA SAHITA © 2026 · Hybrid NLP + Rule-Based Eligibility Engine · Multilingual Scheme Platform</p>
+    <p id="footer-sub" class="text-slate-400 mt-1">Rules decide eligibility, never the LLM. Verified against official government portals.</p>
+  </footer>
+
+  <script>
+    let currentLang = 'en';
+    let currentCategory = '';
+
+    // ==========================================
+    // COMPLETE MULTILINGUAL UI DICTIONARY
+    // ==========================================
+    const UI_I18N = {
+      en: {
+        brand_tag: "Government Portal",
+        subtitle: "Multilingual Scheme Discovery & Verified Eligibility Engine",
+        hero_badge: "100 Verified Central & State Schemes Across India",
+        hero_title: "Discover Government Schemes You Are Eligible For",
+        hero_sub: "Search in your regional language. Rule-based eligibility checking with source-grounded answers.",
+        placeholder: "Search schemes: 'farmer loan with subsidy', 'scholarship for college', 'health insurance'...",
+        search_btn: "Search",
+        try_asking: "Try asking:",
+        prompts: [
+          "I need a scholarship for college",
+          "Farmer crop assistance and loan scheme",
+          "Free health insurance for senior citizens 70+",
+          "Financial assistance for women and girls"
+        ],
+        cat_header: "Explore By Category",
+        cat_all: "Show All Categories",
+        schemes_unit: "schemes",
+        filter_heading: "10 Filter Controls",
+        reset_btn: "Reset",
+        lbl_cat: "1. Category",
+        lbl_level: "2. Government Level",
+        lbl_state: "3. State / UT",
+        lbl_ben: "4. Beneficiary Group",
+        lbl_age: "5. Age Group",
+        lbl_income: "6. Max Family Income (₹)",
+        lbl_social: "7. Social Category",
+        lbl_btype: "8. Benefit Type",
+        lbl_status: "9. Application Status",
+        lbl_sort: "10. Sort By",
+        lang_pill: "Language: ENGLISH",
+        found_count: "Found {n} matching schemes",
+        searching: "Searching 100 verified schemes...",
+        no_res_title: "No schemes matched your exact filters",
+        no_res_sub: "Try broadening your income, age group, or state filter.",
+        reset_all_btn: "Reset All Filters",
+        benefit_badge: "Financial Benefit",
+        ind_eligibility: "Eligibility Match",
+        ind_type: "Payment Type",
+        ind_docs: "Documents Needed",
+        btn_explain: "AI Explain",
+        btn_portal: "Official Portal",
+        btn_pdf: "Guidelines PDF",
+        web_verified: "Web Verified",
+        verify_source: "Single Source / Verify",
+        modal_close: "Close",
+        modal_loading: "Generating source-grounded explanation...",
+        modal_sources: "Official Citations & Guidelines:",
+        modal_verified: "Verified on: {d} · Evaluated via BHASHA SAHITA Rule Engine",
+        footer_text: "BHASHA SAHITA © 2026 · Hybrid NLP + Rule-Based Eligibility Engine · Multilingual Scheme Platform",
+        footer_sub: "Rules decide eligibility, never the LLM. Verified against official government portals.",
+        categories: {
+          education: "Education & Scholarships",
+          agriculture: "Agriculture & Farmers",
+          women_child: "Women & Child Welfare",
+          business: "Business & MSME",
+          healthcare: "Healthcare & Insurance",
+          housing: "Housing & Needs",
+          employment_pension: "Pension & Jobs"
+        },
+        opts: {
+          cat_all: "All Categories",
+          level_all: "All Levels",
+          level_cen: "Central Government",
+          level_sta: "State Government",
+          state_all: "All States / National",
+          ben_all: "All Beneficiaries",
+          ben_stu: "Student",
+          ben_far: "Farmer",
+          ben_wom: "Woman / Girl",
+          ben_sen: "Senior Citizen",
+          ben_ent: "Entrepreneur / MSME",
+          ben_art: "Artisan / Craftsman",
+          age_all: "Any Age",
+          age_u18: "Under 18 (Children/Students)",
+          age_18_25: "18 – 25 (Youth / College)",
+          age_26_40: "26 – 40 (Working Adult)",
+          age_41_60: "41 – 60 (Middle Age)",
+          age_60p: "60+ (Senior Citizens)",
+          inc_all: "Any Income",
+          inc_1: "Up to ₹1 Lakh (BPL / Destitute)",
+          inc_18: "Up to ₹1.8 Lakh (Antyodaya)",
+          inc_25: "Up to ₹2.5 Lakh (Post-Matric cap)",
+          inc_5: "Up to ₹5 Lakh",
+          inc_8: "Up to ₹8 Lakh (EWS limit)",
+          soc_all: "All Categories",
+          btype_all: "All Benefit Types",
+          btype_grant: "Direct Grant / Cash",
+          btype_sch: "Scholarship",
+          btype_sub: "Subsidy",
+          btype_loan: "Concessional Loan",
+          btype_pen: "Pension",
+          btype_ins: "Insurance Cover",
+          stat_all: "All Statuses",
+          stat_yr: "Year-round Active",
+          stat_open: "Open Window",
+          stat_sea: "Seasonal",
+          stat_clo: "Closed / Check Extension",
+          stat_ver: "Needs Verification",
+          sort_rel: "Relevance Score",
+          sort_ben: "Highest Financial Benefit",
+          sort_lat: "Latest Launch Year",
+          sort_dea: "Application Deadline"
+        }
+      },
+
+      hi: {
+        brand_tag: "सरकारी पोर्टल",
+        subtitle: "बहुभाषी सरकारी योजना खोज एवं सत्यापित पात्रता इंजन",
+        hero_badge: "पूरे भारत की 100 सत्यापित केंद्रीय एवं राज्य योजनाएं",
+        hero_title: "जानिए वे सभी सरकारी योजनाएं जिनके लिए आप पात्र हैं",
+        hero_sub: "अपनी क्षेत्रीय भाषा में खोजें। नियमों पर आधारित पात्रता जांच और सरकारी स्रोतों से सत्यापित उत्तर।",
+        placeholder: "योजना खोजें: 'किसान फसल ऋण सब्सिडी', 'कॉलेज छात्रवृत्ति', 'मुफ्त स्वास्थ्य बीमा', 'महिला योजनाएं'...",
+        search_btn: "खोजें",
+        try_asking: "पूछ कर देखें:",
+        prompts: [
+          "मुझे कॉलेज के लिए छात्रवृत्ति चाहिए",
+          "किसानों के लिए फसल सहायता और ऋण",
+          "70 वर्ष से अधिक के लिए मुफ्त स्वास्थ्य बीमा",
+          "महिलाओं के लिए मासिक आर्थिक सहायता योजना"
+        ],
+        cat_header: "श्रेणी अनुसार योजनाएं देखें",
+        cat_all: "सभी श्रेणियां देखें",
+        schemes_unit: "योजनाएं",
+        filter_heading: "10 फ़िल्टर नियंत्रण",
+        reset_btn: "रीसेट करें",
+        lbl_cat: "1. श्रेणी",
+        lbl_level: "2. सरकारी स्तर",
+        lbl_state: "3. राज्य / केंद्र शासित",
+        lbl_ben: "4. लाभार्थी समूह",
+        lbl_age: "5. आयु वर्ग",
+        lbl_income: "6. अधिकतम पारिवारिक आय",
+        lbl_social: "7. सामाजिक वर्ग",
+        lbl_btype: "8. लाभ का प्रकार",
+        lbl_status: "9. आवेदन स्थिति",
+        lbl_sort: "10. क्रमबद्ध करें",
+        lang_pill: "भाषा: हिन्दी",
+        found_count: "कुल {n} योजनाएं मिलीं",
+        searching: "100 सत्यापित योजनाओं में खोज रहे हैं...",
+        no_res_title: "आपके चुने गए फिल्टर के अनुसार कोई योजना नहीं मिली",
+        no_res_sub: "कृपया आय, आयु या राज्य फिल्टर को बदलकर पुनः प्रयास करें।",
+        reset_all_btn: "सभी फिल्टर रीसेट करें",
+        benefit_badge: "वित्तीय लाभ",
+        ind_eligibility: "पात्रता मेल",
+        ind_type: "सहायता प्रकार",
+        ind_docs: "आवश्यक दस्तावेज",
+        btn_explain: "एआई विवरण",
+        btn_portal: "आधिकारिक पोर्टल",
+        btn_pdf: "दिशानिर्देश पीडीएफ",
+        web_verified: "सत्यापित",
+        verify_source: "पोर्टल पर पुष्टि करें",
+        modal_close: "बंद करें",
+        modal_loading: "सरकारी नियमों से सत्यापित एआई विवरण तैयार हो रहा है...",
+        modal_sources: "आधिकारिक संदर्भ व दिशानिर्देश:",
+        modal_verified: "सत्यापन तिथि: {d} · भाषा सहिता नियम इंजन द्वारा मूल्यांकित",
+        footer_text: "भाषा सहिता © 2026 · हाइब्रिड एनएलपी + नियम-आधारित पात्रता इंजन · बहुभाषी योजना मंच",
+        footer_sub: "नियम पात्रता तय करते हैं, एआई नहीं। आधिकारिक सरकारी पोर्टलों से सत्यापित।",
+        categories: {
+          education: "शिक्षा और छात्रवृत्ति",
+          agriculture: "कृषि और किसान कल्याण",
+          women_child: "महिला एवं बाल विकास",
+          business: "व्यापार और एमएसएमई",
+          healthcare: "स्वास्थ्य और चिकित्सा",
+          housing: "आवास और सुविधाएं",
+          employment_pension: "रोजगार और पेंशन"
+        },
+        opts: {
+          cat_all: "सभी श्रेणियां",
+          level_all: "सभी स्तर",
+          level_cen: "केंद्रीय सरकार",
+          level_sta: "राज्य सरकार",
+          state_all: "सभी राज्य / राष्ट्रीय",
+          ben_all: "सभी लाभार्थी",
+          ben_stu: "विद्यार्थी / छात्र",
+          ben_far: "किसान",
+          ben_wom: "महिला / बालिका",
+          ben_sen: "वरिष्ठ नागरिक",
+          ben_ent: "व्यापारी / उद्यमी",
+          ben_art: "कारीगर / शिल्पकार",
+          age_all: "कोई भी आयु",
+          age_u18: "18 से कम (बच्चे / छात्र)",
+          age_18_25: "18 – 25 (युवा / कॉलेज)",
+          age_26_40: "26 – 40 (कामकाजी वयस्क)",
+          age_41_60: "41 – 60 (मध्यम आयु)",
+          age_60p: "60+ (वरिष्ठ नागरिक)",
+          inc_all: "कोई भी आय",
+          inc_1: "₹1 लाख तक (बीपीएल / निराश्रित)",
+          inc_18: "₹1.8 लाख तक (अंत्योदय)",
+          inc_25: "₹2.5 लाख तक (पोस्ट-मैट्रिक)",
+          inc_5: "₹5 लाख तक",
+          inc_8: "₹8 लाख तक (ईडब्ल्यूएस)",
+          soc_all: "सभी सामाजिक वर्ग",
+          btype_all: "सभी लाभ प्रकार",
+          btype_grant: "प्रत्यक्ष अनुदान (नकद)",
+          btype_sch: "छात्रवृत्ति",
+          btype_sub: "सब्सिडी",
+          btype_loan: "रियायती ऋण",
+          btype_pen: "मासिक पेंशन",
+          btype_ins: "स्वास्थ्य / जीवन बीमा",
+          stat_all: "सभी स्थितियां",
+          stat_yr: "वर्ष भर सक्रिय",
+          stat_open: "आवेदन खुला है",
+          stat_sea: "मौसमी योजना",
+          stat_clo: "समाप्त / विस्तार देखें",
+          stat_ver: "सत्यापन आवश्यक",
+          sort_rel: "प्रासंगिकता अनुसार",
+          sort_ben: "अधिकतम वित्तीय लाभ",
+          sort_lat: "नवीनतम योजना",
+          sort_dea: "आवेदन की अंतिम तिथि"
+        }
+      },
+
+      mr: {
+        brand_tag: "शासकीय पोर्टल",
+        subtitle: "बहुभाषिक सरकारी योजना शोध आणि पडताळणी पात्रता इंजिन",
+        hero_badge: "संपूर्ण भारतातील १०० पडताळणी झालेल्या केंद्र व राज्य योजना",
+        hero_title: "तुम्ही पात्र असणाऱ्या सर्व सरकारी योजना शोधा",
+        hero_sub: "तुमच्या मातृभाषेत शोधा. नियमांवर आधारित पात्रता तपासणी आणि अधिकृत सरकारी संदर्भ.",
+        placeholder: "योजना शोधा: 'शेतकरी पीक कर्ज सबसिडी', 'महाविद्यालयीन शिष्यवृत्ती', 'आरोग्य विमा', 'महिलांसाठी योजना'...",
+        search_btn: "शोधा",
+        try_asking: "विचारून पहा:",
+        prompts: [
+          "मला उच्च शिक्षणासाठी शिष्यवृत्ती हवी आहे",
+          "मला शेतकऱ्यांसाठी आर्थिक मदत हवी आहे",
+          "लाडकी बहीण योजना अर्ज व पात्रता",
+          "७० वर्षांवरील ज्येष्ठांसाठी मोफत आरोग्य विमा"
+        ],
+        cat_header: "वर्गवारीनुसार योजना शोधा",
+        cat_all: "सर्व वर्गवारी पहा",
+        schemes_unit: "योजना",
+        filter_heading: "१० फिल्टर नियंत्रणे",
+        reset_btn: "रीसेट करा",
+        lbl_cat: "१. वर्गवारी",
+        lbl_level: "२. सरकारी स्तर",
+        lbl_state: "३. राज्य / केंद्रशासित",
+        lbl_ben: "४. लाभार्थी गट",
+        lbl_age: "५. वयोगट",
+        lbl_income: "६. कमाल कौटुंबिक उत्पन्न",
+        lbl_social: "७. सामाजिक प्रवर्ग",
+        lbl_btype: "८. लाभाचा प्रकार",
+        lbl_status: "९. अर्जाची स्थिती",
+        lbl_sort: "१०. क्रमवारी लावा",
+        lang_pill: "भाषा: मराठी",
+        found_count: "एकूण {n} योजना सापडल्या",
+        searching: "१०० पडताळणी झालेल्या योजनांमध्ये शोधत आहे...",
+        no_res_title: "निवडलेल्या फिल्टरनुसार कोणतीही योजना सापडली नाही",
+        no_res_sub: "कृपया उत्पन्न, वयोगट किंवा राज्य फिल्टर बदलून पुन्हा प्रयत्न करा.",
+        reset_all_btn: "सर्व फिल्टर रीसेट करा",
+        benefit_badge: "आर्थिक लाभ",
+        ind_eligibility: "पात्रता स्थिती",
+        ind_type: "लाभाचा प्रकार",
+        ind_docs: "आवश्यक कागदपत्रे",
+        btn_explain: "एआय माहिती",
+        btn_portal: "अधिकृत पोर्टल",
+        btn_pdf: "मार्गदर्शिका पीडीएफ",
+        web_verified: "पडताळणी झाली",
+        verify_source: "पोर्टलवर तपासा",
+        modal_close: "बंद करा",
+        modal_loading: "अधिकृत नियमांनुसार एआय माहिती तयार केली जात आहे...",
+        modal_sources: "अधिकृत संदर्भ व मार्गदर्शक तत्त्वे:",
+        modal_verified: "पडताळणी दिनांक: {d} · भाषा सहिता नियम इंजिनद्वारे तपासणी",
+        footer_text: "भाषा सहिता © 2026 · हायब्रिड एनएलपी + नियम-आधारित पात्रता इंजिन · बहुभाषिक योजना मंच",
+        footer_sub: "नियम पात्रता ठरवतात, एआय नाही. अधिकृत सरकारी पोर्टल्सवरून पडताळणी.",
+        categories: {
+          education: "शिक्षण आणि शिष्यवृत्ती",
+          agriculture: "कृषी आणि शेतकरी कल्याण",
+          women_child: "महिला आणि बाल विकास",
+          business: "व्यवसाय आणि उद्योग",
+          healthcare: "आरोग्य आणि वैद्यकीय",
+          housing: "गृहनिर्माण आणि सुविधा",
+          employment_pension: "रोजगार आणि पेन्शन"
+        },
+        opts: {
+          cat_all: "सर्व वर्गवारी",
+          level_all: "सर्व स्तर",
+          level_cen: "केंद्र सरकार",
+          level_sta: "राज्य सरकार",
+          state_all: "सर्व राज्ये / राष्ट्रीय",
+          ben_all: "सर्व लाभार्थी",
+          ben_stu: "विद्यार्थी",
+          ben_far: "शेतकरी",
+          ben_wom: "महिला / मुलगी",
+          ben_sen: "ज्येष्ठ नागरिक",
+          ben_ent: "उद्योजक / व्यावसायिक",
+          ben_art: "कारागीर / बलुतेदार",
+          age_all: "सर्व वयोगट",
+          age_u18: "१८ वर्षांखालील (मुले/विद्यार्थी)",
+          age_18_25: "१८ – २५ (तरुण / कॉलेज)",
+          age_26_40: "२६ – ४० (कार्यरत प्रौढ)",
+          age_41_60: "४१ – ६० (मध्यम वयीन)",
+          age_60p: "६०+ (ज्येष्ठ नागरिक)",
+          inc_all: "सर्व उत्पन्न गट",
+          inc_1: "₹१ लाखांपर्यंत (दारिद्र्यरेषेखालील)",
+          inc_18: "₹१.८ लाखांपर्यंत (अंत्योदय)",
+          inc_25: "₹२.५ लाखांपर्यंत (मॅट्रिकोत्तर)",
+          inc_5: "₹५ लाखांपर्यंत",
+          inc_8: "₹८ लाखांपर्यंत (ईडब्ल्यूएस)",
+          soc_all: "सर्व प्रवर्ग",
+          btype_all: "सर्व लाभांचे प्रकार",
+          btype_grant: "थेट अनुदान (रोख)",
+          btype_sch: "शिष्यवृत्ती",
+          btype_sub: "सबसिडी",
+          btype_loan: "सवलतीचे कर्ज",
+          btype_pen: "मासिक पेन्शन",
+          btype_ins: "आरोग्य / जीवन विमा",
+          stat_all: "सर्व स्थिती",
+          stat_yr: "वर्षभर सक्रिय",
+          stat_open: "अर्ज सुरू आहेत",
+          stat_sea: "हंगामी योजना",
+          stat_clo: "बंद / मुदतवाढ तपासा",
+          stat_ver: "पडताळणी आवश्यक",
+          sort_rel: "प्रासंगिकतेनुसार",
+          sort_ben: "सर्वाधिक आर्थिक लाभ",
+          sort_lat: "नवीनतम योजना",
+          sort_dea: "अर्जाची अंतिम तारीख"
+        }
+      },
+
+      pa: {
+        brand_tag: "ਸਰਕਾਰੀ ਪੋਰਟਲ",
+        subtitle: "ਬਹੁ-ਭਾਸ਼ਾਈ ਸਰਕਾਰੀ ਯੋਜਨਾ ਖੋਜ ਅਤੇ ਪ੍ਰਮਾਣਿਤ ਯੋਗਤਾ ਇੰਜਣ",
+        hero_badge: "ਭਾਰਤ ਭਰ ਦੀਆਂ 100 ਪ੍ਰਮਾਣਿਤ ਕੇਂਦਰੀ ਅਤੇ ਰਾਜ ਯੋਜਨਾਵਾਂ",
+        hero_title: "ਉਹ ਸਾਰੀਆਂ ਸਰਕਾਰੀ ਯੋਜਨਾਵਾਂ ਲੱਭੋ ਜਿਨ੍ਹਾਂ ਲਈ ਤੁਸੀਂ ਯੋਗ ਹੋ",
+        hero_sub: "ਆਪਣੀ ਖੇਤਰੀ ਭਾਸ਼ਾ ਵਿੱਚ ਖੋਜੋ। ਨਿਯਮਾਂ ਅਧਾਰਤ ਯੋਗਤਾ ਜਾਂਚ ਅਤੇ ਸਰਕਾਰੀ ਸਰੋਤਾਂ ਤੋਂ ਪ੍ਰਮਾਣਿਤ ਜਵਾਬ।",
+        placeholder: "ਸਕੀਮ ਖੋਜੋ: 'ਕਿਸਾਨ ਕਰਜ਼ਾ ਸਬਸਿਡੀ', 'ਕਾਲਜ ਵਜ਼ੀਫ਼ਾ', 'ਸਿਹਤ ਬੀਮਾ', 'ਔਰਤਾਂ ਲਈ ਸਹਾਇਤਾ'...",
+        search_btn: "ਖੋਜੋ",
+        try_asking: "ਪੁੱਛ ਕੇ ਦੇਖੋ:",
+        prompts: [
+          "ਮੈਨੂੰ ਕਾਲਜ ਦੀ ਪੜ੍ਹਾਈ ਲਈ ਵਜ਼ੀਫ਼ਾ ਚਾਹੀਦਾ ਹੈ",
+          "ਮੈਨੂੰ ਕਿਸਾਨਾਂ ਲਈ ਸਹਾਇਤਾ ਚਾਹੀਦੀ ਹੈ",
+          "ਧੀ ਦੇ ਵਿਆਹ ਲਈ ਆਸ਼ੀਰਵਾਦ ਸ਼ਗਨ ਸਕੀਮ",
+          "ਬਜ਼ੁਰਗਾਂ ਲਈ ਬੁਢਾਪਾ ਪੈਨਸ਼ਨ ਅਤੇ ਮੁਫ਼ਤ ਬੱਸ ਸਫ਼ਰ"
+        ],
+        cat_header: "ਸ਼੍ਰੇਣੀ ਅਨੁਸਾਰ ਯੋਜਨਾਵਾਂ ਦੇਖੋ",
+        cat_all: "ਸਾਰੀਆਂ ਸ਼੍ਰੇਣੀਆਂ ਦੇਖੋ",
+        schemes_unit: "ਯੋਜਨਾਵਾਂ",
+        filter_heading: "10 ਫਿਲਟਰ ਨਿਯੰਤਰਣ",
+        reset_btn: "ਰੀਸੈਟ ਕਰੋ",
+        lbl_cat: "1. ਸ਼੍ਰੇਣੀ",
+        lbl_level: "2. ਸਰਕਾਰੀ ਪੱਧਰ",
+        lbl_state: "3. ਰਾਜ / ਕੇਂਦਰ ਸ਼ਾਸਤ",
+        lbl_ben: "4. ਲਾਭਪਾਤਰੀ ਸਮੂਹ",
+        lbl_age: "5. ਉਮਰ ਵਰਗ",
+        lbl_income: "6. ਵੱਧ ਤੋਂ ਵੱਧ ਪਰਿਵਾਰਕ ਆਮਦਨ",
+        lbl_social: "7. ਸਮਾਜਿਕ ਵਰਗ",
+        lbl_btype: "8. ਲਾਭ ਦੀ ਕਿਸਮ",
+        lbl_status: "9. ਅਰਜ਼ੀ ਦੀ ਸਥਿਤੀ",
+        lbl_sort: "10. ਤਰਤੀਬ ਦਿਓ",
+        lang_pill: "ਭਾਸ਼ਾ: ਪੰਜਾਬੀ",
+        found_count: "ਕੁੱਲ {n} ਯੋਜਨਾਵਾਂ ਮਿਲੀਆਂ",
+        searching: "100 ਪ੍ਰਮਾਣਿਤ ਯੋਜਨਾਵਾਂ ਵਿੱਚ ਖੋਜ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...",
+        no_res_title: "ਤੁਹਾਡੇ ਫਿਲਟਰਾਂ ਅਨੁਸਾਰ ਕੋਈ ਯੋਜਨਾ ਨਹੀਂ ਮਿਲੀ",
+        no_res_sub: "ਕਿਰਪਾ ਕਰਕੇ ਆਮਦਨ, ਉਮਰ ਜਾਂ ਰਾਜ ਫਿਲਟਰ ਬਦਲ ਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+        reset_all_btn: "ਸਾਰੇ ਫਿਲਟਰ ਰੀਸੈਟ ਕਰੋ",
+        benefit_badge: "ਵਿੱਤੀ ਲਾਭ",
+        ind_eligibility: "ਯੋਗਤਾ ਮੇਲ",
+        ind_type: "ਸਹਾਇਤਾ ਕਿਸਮ",
+        ind_docs: "ਲੋੜੀਂਦੇ ਦਸਤਾਵੇਜ਼",
+        btn_explain: "ਏਆਈ ਵਿਆਖਿਆ",
+        btn_portal: "ਅਧਿਕਾਰਤ ਪੋਰਟਲ",
+        btn_pdf: "ਦਿਸ਼ਾ-ਨਿਰਦੇਸ਼ ਪੀਡੀਐਫ",
+        web_verified: "ਪ੍ਰਮਾਣਿਤ",
+        verify_source: "ਪੋਰਟਲ 'ਤੇ ਤਸਦੀਕ ਕਰੋ",
+        modal_close: "ਬੰਦ ਕਰੋ",
+        modal_loading: "ਸਰਕਾਰੀ ਨਿਯਮਾਂ ਅਨੁਸਾਰ ਏਆਈ ਵਿਆਖਿਆ ਤਿਆਰ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...",
+        modal_sources: "ਅਧਿਕਾਰਤ ਸਰੋਤ ਅਤੇ ਨਿਯਮ:",
+        modal_verified: "ਜਾਂਚ ਮਿਤੀ: {d} · ਭਾਸ਼ਾ ਸਹਿਤਾ ਨਿਯਮ ਇੰਜਣ ਦੁਆਰਾ ਜਾਂਚਿਆ ਗਿਆ",
+        footer_text: "ਭਾਸ਼ਾ ਸਹਿਤਾ © 2026 · ਹਾਈਬ੍ਰਿਡ ਐਨਐਲਪੀ + ਨਿਯਮ ਅਧਾਰਤ ਯੋਗਤਾ ਇੰਜਣ · ਬਹੁ-ਭਾਸ਼ਾਈ ਪੋਰਟਲ",
+        footer_sub: "ਨਿਯਮ ਯੋਗਤਾ ਨਿਰਧਾਰਤ ਕਰਦੇ ਹਨ, ਏਆਈ ਨਹੀਂ। ਅਧਿਕਾਰਤ ਸਰਕਾਰੀ ਪੋਰਟਲਾਂ ਤੋਂ ਪ੍ਰਮਾਣਿਤ।",
+        categories: {
+          education: "ਸਿੱਖਿਆ ਅਤੇ ਵਜ਼ੀਫ਼ੇ",
+          agriculture: "ਖੇਤੀਬਾੜੀ ਅਤੇ ਕਿਸਾਨ ਭਲਾਈ",
+          women_child: "ਮਹਿਲਾ ਅਤੇ ਬਾਲ ਵਿਕਾਸ",
+          business: "ਵਪਾਰ ਅਤੇ ਉੱਦਮਤਾ",
+          healthcare: "ਸਿਹਤ ਅਤੇ ਡਾਕਟਰੀ ਬੀਮਾ",
+          housing: "ਰਿਹਾਇਸ਼ ਅਤੇ ਸਹੂਲਤਾਂ",
+          employment_pension: "ਰੁਜ਼ਗਾਰ ਅਤੇ ਪੈਨਸ਼ਨ"
+        },
+        opts: {
+          cat_all: "ਸਾਰੀਆਂ ਸ਼੍ਰੇਣੀਆਂ",
+          level_all: "ਸਾਰੇ ਪੱਧਰ",
+          level_cen: "ਕੇਂਦਰ ਸਰਕਾਰ",
+          level_sta: "ਰਾਜ ਸਰਕਾਰ",
+          state_all: "ਸਾਰੇ ਰਾਜ / ਰਾਸ਼ਟਰੀ",
+          ben_all: "ਸਾਰੇ ਲਾਭਪਾਤਰੀ",
+          ben_stu: "ਵਿਦਿਆਰਥੀ",
+          ben_far: "ਕਿਸਾਨ",
+          ben_wom: "ਔਰਤ / ਬੱਚੀ",
+          ben_sen: "ਬਜ਼ੁਰਗ ਨਾਗਰਿਕ",
+          ben_ent: "ਕਾਰੋਬਾਰੀ / ਉੱਦਮੀ",
+          ben_art: "ਕਾਰੀਗਰ / ਦਸਤਕਾਰ",
+          age_all: "ਕੋਈ ਵੀ ਉਮਰ",
+          age_u18: "18 ਤੋਂ ਘੱਟ (ਬੱਚੇ/ਵਿਦਿਆਰਥੀ)",
+          age_18_25: "18 – 25 (ਨੌਜਵਾਨ / ਕਾਲਜ)",
+          age_26_40: "26 – 40 (ਕੰਮਕਾਜੀ ਬਾਲਗ)",
+          age_41_60: "41 – 60 (ਅੱਧਖੜ ਉਮਰ)",
+          age_60p: "60+ (ਸੀਨੀਅਰ ਸਿਟੀਜ਼ਨ)",
+          inc_all: "ਕੋਈ ਵੀ ਆਮਦਨ",
+          inc_1: "₹1 ਲੱਖ ਤੱਕ (ਗਰੀਬੀ ਰੇਖਾ ਤੋਂ ਹੇਠਾਂ)",
+          inc_18: "₹1.8 ਲੱਖ ਤੱਕ (ਅੰਤੋਦਿਆ)",
+          inc_25: "₹2.5 ਲੱਖ ਤੱਕ (ਵਜ਼ੀਫ਼ਾ ਹੱਦ)",
+          inc_5: "₹5 ਲੱਖ ਤੱਕ",
+          inc_8: "₹8 ਲੱਖ ਤੱਕ (ਈਡਬਲਯੂਐਸ)",
+          soc_all: "ਸਾਰੇ ਸਮਾਜਿਕ ਵਰਗ",
+          btype_all: "ਸਾਰੀਆਂ ਲਾਭ ਕਿਸਮਾਂ",
+          btype_grant: "ਸਿੱਧੀ ਗ੍ਰਾਂਟ (ਨਕਦ)",
+          btype_sch: "ਵਜ਼ੀਫ਼ਾ",
+          btype_sub: "ਸਬਸਿਡੀ",
+          btype_loan: "ਰਿਆਇਤੀ ਕਰਜ਼ਾ",
+          btype_pen: "ਮਹੀਨਾਵਾਰ ਪੈਨਸ਼ਨ",
+          btype_ins: "ਸਿਹਤ / ਜੀਵਨ ਬੀਮਾ",
+          stat_all: "ਸਾਰੀਆਂ ਸਥਿਤੀਆਂ",
+          stat_yr: "ਸਾਰਾ ਸਾਲ ਸਰਗਰਮ",
+          stat_open: "ਅਰਜ਼ੀਆਂ ਖੁੱਲ੍ਹੀਆਂ ਹਨ",
+          stat_sea: "ਮੌਸਮੀ ਸਕੀਮ",
+          stat_clo: "ਬੰਦ / ਵਾਧਾ ਦੇਖੋ",
+          stat_ver: "ਜਾਂਚ ਜ਼ਰੂਰੀ",
+          sort_rel: "ਅਨੁਕੂਲਤਾ ਅਨੁਸਾਰ",
+          sort_ben: "ਸਭ ਤੋਂ ਵੱਧ ਵਿੱਤੀ ਲਾਭ",
+          sort_lat: "ਨਵੀਨਤਮ ਯੋਜਨਾ",
+          sort_dea: "ਅੰਤਿਮ ਮਿਤੀ"
+        }
+      },
+
+      te: {
+        brand_tag: "ప్రభుత్వ పోర్టల్",
+        subtitle: "బహుభాషా ప్రభుత్వ పథకాల అన్వేషణ మరియు అర్హత నిర్ధారణ ఇంజిన్",
+        hero_badge: "భారతదేశ వ్యాప్తంగా 100 ధృవీకరించబడిన కేంద్ర & రాష్ట్ర ప్రభుత్వ పథకాలు",
+        hero_title: "మీరు అర్హులైన అన్ని ప్రభుత్వ పథకాలను తెలుసుకోండి",
+        hero_sub: "మీ ప్రాంతీయ భాషలో వెతకండి. నిబంధనల ఆధారిత అర్హత తనిఖీ మరియు అధికారిక ఆధారాలతో సమాధానాలు.",
+        placeholder: "పథకం వెతకండి: 'రైతు రుణం సబ్సిడీ', 'కాలేజీ స్కాలర్‌షిప్', 'ఉచిత ఆసుపత్రి చికిత్స'...",
+        search_btn: "వెతకండి",
+        try_asking: "ఇలా అడగండి:",
+        prompts: [
+          "నాకు కాలేజీ చదువు కోసం స్కాలర్‌షిప్ కావాలి",
+          "రైతు భరోసా పంట పెట్టుబడి సహాయం",
+          "70 ఏళ్లు పైబడిన వారికి ఉచిత వైద్య భీమా",
+          "కల్యాణ లక్ష్మి వివాహ ఆర్థిక సహాయం"
+        ],
+        cat_header: "విభాగాల వారీగా అన్వేషించండి",
+        cat_all: "అన్ని విభాగాలు చూడండి",
+        schemes_unit: "పథకాలు",
+        filter_heading: "10 ఫిల్టర్ నియంత్రణలు",
+        reset_btn: "రీసెట్ చేయండి",
+        lbl_cat: "1. విభాగం",
+        lbl_level: "2. ప్రభుత్వ స్థాయి",
+        lbl_state: "3. రాష్ట్రం / కేంద్రపాలిత",
+        lbl_ben: "4. లబ్ధిదారుల సమూహం",
+        lbl_age: "5. వయోపరిమితి",
+        lbl_income: "6. గరిష్ట కుటుంబ ఆదాయం",
+        lbl_social: "7. సామాజిక వర్గం",
+        lbl_btype: "8. ప్రయోజనం రకం",
+        lbl_status: "9. దరఖాస్తు స్థితి",
+        lbl_sort: "10. క్రమబద్ధీకరించండి",
+        lang_pill: "భాష: తెలుగు",
+        found_count: "మొత్తం {n} పథకాలు కనుగొనబడ్డాయి",
+        searching: "100 ధృవీకరించబడిన పథకాలలో వెతుకుతోంది...",
+        no_res_title: "మీరు ఎంచుకున్న ఫిల్టర్‌లకు సరిపోలే పథకాలు లేవు",
+        no_res_sub: "దయచేసి ఆదాయం, వయస్సు లేదా రాష్ట్ర ఫిల్టర్‌లను మార్చండి.",
+        reset_all_btn: "అన్ని ఫిల్టర్‌లను రీసెట్ చేయండి",
+        benefit_badge: "ఆర్థిక ప్రయోజనం",
+        ind_eligibility: "అర్హత స్థితి",
+        ind_type: "చెల్లింపు రకం",
+        ind_docs: "అవసరమైన పత్రాలు",
+        btn_explain: "ఏఐ వివరణ",
+        btn_portal: "అధికారిక పోర్టల్",
+        btn_pdf: "మార్గదర్శకాల పీడీఎఫ్",
+        web_verified: "ధృవీకరించబడింది",
+        verify_source: "పోర్టల్‌లో నిర్ధారించుకోండి",
+        modal_close: "మూసివేయి",
+        modal_loading: "అధికారిక నిబంధనల ప్రకారం ఏఐ వివరణ సిద్ధమవుతోంది...",
+        modal_sources: "అధికారిక ఆధారాలు & మార్గదర్శకాలు:",
+        modal_verified: "ధృవీకరణ తేదీ: {d} · భాషా సహిత రూల్ ఇంజిన్ ద్వారా మూల్యాంకనం చేయబడింది",
+        footer_text: "భాషా సహిత © 2026 · హైబ్రిడ్ ఎన్‌ఎల్‌పీ + నిబంధనల ఆధారిత అర్హత ఇంజిన్ · బహుభాషా వేదిక",
+        footer_sub: "నిబంధనలు అర్హతను నిర్ణయిస్తాయి, ఏఐ కాదు. అధికారిక ప్రభుత్వ పోర్టల్స్ ద్వారా ధృవీకరించబడింది.",
+        categories: {
+          education: "విద్య మరియు స్కాలర్‌షిప్‌లు",
+          agriculture: "వ్యవసాయం మరియు రైతు సంక్షేమం",
+          women_child: "మహిళా మరియు శిశు సంక్షేమం",
+          business: "వ్యాపారం మరియు పరిశ్రమలు",
+          healthcare: "ఆరోగ్యం మరియు వైద్య భీమా",
+          housing: "గృహనిర్మాణం మరియు వసతులు",
+          employment_pension: "ఉపాధి మరియు పింఛన్లు"
+        },
+        opts: {
+          cat_all: "అన్ని విభాగాలు",
+          level_all: "అన్ని స్థాయిలు",
+          level_cen: "కేంద్ర ప్రభుత్వం",
+          level_sta: "రాష్ట్ర ప్రభుత్వం",
+          state_all: "అన్ని రాష్ట్రాలు / జాతీయ",
+          ben_all: "అందరు లబ్ధిదారులు",
+          ben_stu: "విద్యార్థి",
+          ben_far: "రైతు",
+          ben_wom: "మహిళ / బాలిక",
+          ben_sen: "వృద్ధులు",
+          ben_ent: "వ్యాపారి / వ్యవస్థాపకుడు",
+          ben_art: "చేతివృత్తుల వారు",
+          age_all: "ఏ వయస్సు అయినా",
+          age_u18: "18 లోపు (పిల్లలు/విద్యార్థులు)",
+          age_18_25: "18 – 25 (యువత / కాలేజీ)",
+          age_26_40: "26 – 40 (ఉద్యోగులు)",
+          age_41_60: "41 – 60 (మధ్య వయస్కులు)",
+          age_60p: "60+ (వృద్ధులు)",
+          inc_all: "ఏ ఆదాయమైనా",
+          inc_1: "₹1 లక్ష వరకు (దారిద్య్రరేఖకు దిగువన)",
+          inc_18: "₹1.8 లక్షల వరకు (అంత్యోదయ)",
+          inc_25: "₹2.5 లక్షల వరకు (పోస్ట్-మెట్రిక్)",
+          inc_5: "₹5 లక్షల వరకు",
+          inc_8: "₹8 లక్షల వరకు (ఈడబ్ల్యూఎస్)",
+          soc_all: "అన్ని సామాజిక వర్గాలు",
+          btype_all: "అన్ని ప్రయోజన రకాలు",
+          btype_grant: "ప్రత్యక్ష నగదు సహాయం",
+          btype_sch: "స్కాలర్‌షిప్",
+          btype_sub: "సబ్సిడీ",
+          btype_loan: "రాయితీ రుణం",
+          btype_pen: "నెలవారీ పెన్షన్",
+          btype_ins: "ఆరోగ్య / జీవిత భీమా",
+          stat_all: "అన్ని స్థితులు",
+          stat_yr: "ఏడాది పొడవునా క్రియాశీలకం",
+          stat_open: "దరఖాస్తులు ప్రారంభమయ్యాయి",
+          stat_sea: "సీజనల్ పథకం",
+          stat_clo: "ముగిసింది / పొడిగింపు చూడండి",
+          stat_ver: "ధృవీకరణ అవసరం",
+          sort_rel: "ప్రాముఖ్యత ప్రకారం",
+          sort_ben: "అత్యధిక ఆర్థిక ప్రయోజనం",
+          sort_lat: "తాజా పథకం",
+          sort_dea: "దరఖాస్తు చివరి తేదీ"
+        }
+      },
+
+      bn: {
+        brand_tag: "সরকারি পোর্টাল",
+        subtitle: "বহুভাষিক সরকারি প্রকল্প সন্ধান ও যাচাইকৃত যোগ্যতা ইঞ্জিন",
+        hero_badge: "ভারত জুড়ে ১০০টি যাচাইকৃত কেন্দ্রীয় ও রাজ্য সরকারি প্রকল্প",
+        hero_title: "আপনি যে সমস্ত সরকারি প্রকল্পের জন্য যোগ্য তা জানুন",
+        hero_sub: "আপনার মাতৃভাষায় অনুসন্ধান করুন। নিয়ম-ভিত্তিক যোগ্যতা যাচাই এবং সরকারি তথ্যের উপর প্রতিষ্ঠিত উত্তর।",
+        placeholder: "প্রকল্প খুঁজুন: 'কৃষক ঋণ ভর্তুকি', 'কলেজ স্কলারশিপ', 'বিনামূল্যে স্বাস্থ্য বীমা', 'মহিলা অনুদান'...",
+        search_btn: "অনুসন্ধান",
+        try_asking: "জিজ্ঞাসা করুন:",
+        prompts: [
+          "কলেজে পড়ার জন্য স্কলারশিপ দরকার",
+          "কৃষক বন্ধু প্রকল্পের টাকা এবং আর্থিক সাহায্য",
+          "৭০ বছরের বেশি বয়সিদের জন্য বিনামূল্যে স্বাস্থ্য বীমা",
+          "মহিলাদের লক্ষ্মীর ভাণ্ডার প্রকল্প মাসিক অনুদান"
+        ],
+        cat_header: "বিভাগ অনুসারে প্রকল্প খুঁজুন",
+        cat_all: "সমস্ত বিভাগ দেখুন",
+        schemes_unit: "প্রকল্প",
+        filter_heading: "১০টি ফিল্টার নিয়ন্ত্রণ",
+        reset_btn: "রিসেট করুন",
+        lbl_cat: "১. বিভাগ",
+        lbl_level: "২. সরকারি স্তর",
+        lbl_state: "৩. রাজ্য / কেন্দ্রশাসিত",
+        lbl_ben: "৪. উপভোক্তা গোষ্ঠী",
+        lbl_age: "৫. বয়স শ্রেণি",
+        lbl_income: "৬. সর্বোচ্চ পারিবারিক আয়",
+        lbl_social: "৭. সামাজিক শ্রেণি",
+        lbl_btype: "৮. সুবিধার ধরন",
+        lbl_status: "৯. আবেদনের স্থিতি",
+        lbl_sort: "১০. সাজান",
+        lang_pill: "ভাষা: বাংলা",
+        found_count: "মোট {n}টি প্রকল্প পাওয়া গেছে",
+        searching: "১০০টি যাচাইকৃত প্রকল্পের মধ্যে অনুসন্ধান চলছে...",
+        no_res_title: "আপনার নির্বাচিত ফিল্টারের সাথে কোনো প্রকল্প মেলেনি",
+        no_res_sub: "অনুগ্রহ করে আয়, বয়স বা রাজ্য ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন।",
+        reset_all_btn: "সব ফিল্টার রিসেট করুন",
+        benefit_badge: "আর্থিক সুবিধা",
+        ind_eligibility: "যোগ্যতা স্থিতি",
+        ind_type: "সুবিধার ধরন",
+        ind_docs: "প্রয়োজনীয় নথিপত্র",
+        btn_explain: "এআই ব্যাখ্যা",
+        btn_portal: "অফিসিয়াল পোর্টাল",
+        btn_pdf: "নির্দেশিকা পিডিএফ",
+        web_verified: "যাচাইকৃত",
+        verify_source: "পোর্টালে নিশ্চিত করুন",
+        modal_close: "বন্ধ করুন",
+        modal_loading: "সরকারি তথ্যের ভিত্তিতে এআই ব্যাখ্যা প্রস্তুত করা হচ্ছে...",
+        modal_sources: "অফিসিয়াল তথ্যসূত্র ও নির্দেশিকা:",
+        modal_verified: "যাচাইকরণ তারিখ: {d} · ভাষা সহিতা রুল ইঞ্জিনের মাধ্যমে মূল্যায়িত",
+        footer_text: "ভাষা সহিতা © 2026 · হাইব্রিড এনএলপি + নিয়ম-ভিত্তিক যোগ্যতা ইঞ্জিন · বহুভাষিক পোর্টাল",
+        footer_sub: "নিয়মাবলী যোগ্যতা নির্ধারণ করে, এআই নয়। সরকারি পোর্টাল থেকে যাচাইকৃত।",
+        categories: {
+          education: "শিক্ষা ও স্কলারশিপ",
+          agriculture: "কৃষি ও কৃষক কল্যাণ",
+          women_child: "নারী ও শিশু কল্যাণ",
+          business: "ব্যবসা ও উদ্যোগ",
+          healthcare: "স্বাস্থ্য ও চিকিৎসা বীমা",
+          housing: "আবাসন ও মৌলিক চাহিদা",
+          employment_pension: "কর্মসংস্থান ও পেনশন"
+        },
+        opts: {
+          cat_all: "সমস্ত বিভাগ",
+          level_all: "সমস্ত স্তর",
+          level_cen: "কেন্দ্রীয় সরকার",
+          level_sta: "রাজ্য সরকার",
+          state_all: "সমস্ত রাজ্য / জাতীয়",
+          ben_all: "সমস্ত উপভোক্তা",
+          ben_stu: "ছাত্রছাত্রী",
+          ben_far: "কৃষক",
+          ben_wom: "মহিলা / কন্যা",
+          ben_sen: "প্রবীণ নাগরিক",
+          ben_ent: "উদ্যোক্তা / ব্যবসায়ী",
+          ben_art: "কারিগর / শিল্পী",
+          age_all: "যেকোনো বয়স",
+          age_u18: "১৮ বছরের নিচে (শিশু/শিক্ষার্থী)",
+          age_18_25: "১৮ – ২৫ (তরুণ / কলেজ)",
+          age_26_40: "২৬ – ৪০ (কর্মজীবী প্রাপ্তবয়স্ক)",
+          age_41_60: "৪১ – ৬০ (মধ্যবয়সী)",
+          age_60p: "৬০+ (প্রবীণ নাগরিক)",
+          inc_all: "যেকোনো আয়",
+          inc_1: "₹১ লক্ষ পর্যন্ত (বিপিএল / দরিদ্র)",
+          inc_18: "₹১.৮ লক্ষ পর্যন্ত (অন্ত্যোদয়)",
+          inc_25: "₹২.৫ লক্ষ পর্যন্ত (পোস্ট-ম্যাট্রিক)",
+          inc_5: "₹৫ লক্ষ পর্যন্ত",
+          inc_8: "₹৮ লক্ষ পর্যন্ত (ইডব্লিউএস)",
+          soc_all: "সমস্ত সামাজিক শ্রেণি",
+          btype_all: "সমস্ত সুবিধার ধরন",
+          btype_grant: "সরাসরি অনুদান (নগদ)",
+          btype_sch: "স্কলারশিপ",
+          btype_sub: "ভর্তুকি",
+          btype_loan: "স্বল্প সুদের ঋণ",
+          btype_pen: "মাসিক পেনশন",
+          btype_ins: "স্বাস্থ্য / জীবন বীমা",
+          stat_all: "সমস্ত স্থিতি",
+          stat_yr: "সারা বছর সক্রিয়",
+          stat_open: "আবেদন চালু আছে",
+          stat_sea: "মৌসুমি প্রকল্প",
+          stat_clo: "বন্ধ / মেয়াদ বৃদ্ধি দেখুন",
+          stat_ver: "যাচাই প্রয়োজন",
+          sort_rel: "প্রাসঙ্গিকতা অনুসারে",
+          sort_ben: "সর্বোচ্চ আর্থিক সুবিধা",
+          sort_lat: "নতুন প্রকল্প",
+          sort_dea: "আবেদনের শেষ তারিখ"
+        }
+      }
+    };
+
+    const CATEGORIES_DATA = [
+      { key: 'education', icon: 'fa-graduation-cap', count: 16 },
+      { key: 'agriculture', icon: 'fa-wheat-awn', count: 16 },
+      { key: 'women_child', icon: 'fa-person-breastfeeding', count: 20 },
+      { key: 'business', icon: 'fa-briefcase', count: 11 },
+      { key: 'healthcare', icon: 'fa-heart-pulse', count: 12 },
+      { key: 'housing', icon: 'fa-house', count: 9 },
+      { key: 'employment_pension', icon: 'fa-user-clock', count: 16 }
+    ];
+
+    // ==========================================
+    // REAL-TIME LANGUAGE SWITCHER ENGINE
+    // ==========================================
+    function setLanguage(lang) {
+      currentLang = lang;
+
+      // 1. Update active tab style
+      ['en','hi','mr','pa','te','bn'].forEach(l => {
+        const btn = document.getElementById(`lang-${l}`);
+        if(btn) {
+          if (l === lang) {
+            btn.className = "px-2.5 py-1.5 rounded-lg transition-all bg-white text-blue-700 shadow-sm font-bold";
+          } else {
+            btn.className = "px-2.5 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900";
+          }
+        }
+      });
+
+      // 2. Apply all translations in real time
+      applyTranslations(lang);
+
+      // 3. Re-render categories in current language
+      renderCategories();
+
+      // 4. Populate all 10 filter selects in current language
+      populateFilterOptions();
+
+      // 5. Execute search and fetch localized schemes
+      executeSearch();
+    }
+
+    function applyTranslations(lang) {
+      const t = UI_I18N[lang] || UI_I18N.en;
+
+      // Header & Hero
+      document.getElementById('brand-tag-badge').innerText = t.brand_tag;
+      document.getElementById('header-subtitle').innerText = t.subtitle;
+      document.getElementById('hero-badge-text').innerText = t.hero_badge;
+      document.getElementById('hero-title').innerText = t.hero_title;
+      document.getElementById('hero-sub').innerText = t.hero_sub;
+      document.getElementById('search-query').placeholder = t.placeholder;
+      document.getElementById('search-btn-text').innerText = t.search_btn;
+
+      // Category section
+      document.getElementById('category-section-title').innerHTML = `<i class="fa-solid fa-layer-group text-blue-600"></i> ${t.cat_header}`;
+      document.getElementById('clear-cat-btn').innerText = t.cat_all;
+
+      // Sidebar filter labels
+      document.getElementById('filter-heading').innerHTML = `<i class="fa-solid fa-sliders text-blue-600"></i> ${t.filter_heading}`;
+      document.getElementById('filter-reset-btn').innerText = t.reset_btn;
+      document.getElementById('lbl-category').innerText = t.lbl_cat;
+      document.getElementById('lbl-level').innerText = t.lbl_level;
+      document.getElementById('lbl-state').innerText = t.lbl_state;
+      document.getElementById('lbl-beneficiary').innerText = t.lbl_ben;
+      document.getElementById('lbl-age-group').innerText = t.lbl_age;
+      document.getElementById('lbl-income').innerText = t.lbl_income;
+      document.getElementById('lbl-social').innerText = t.lbl_social;
+      document.getElementById('lbl-benefit-type').innerText = t.lbl_btype;
+      document.getElementById('lbl-status').innerText = t.lbl_status;
+      document.getElementById('lbl-sort').innerText = t.lbl_sort;
+
+      // Language pill
+      document.getElementById('detected-lang-pill').innerText = t.lang_pill;
+
+      // Modal strings
+      document.getElementById('modal-close-btn').innerText = t.modal_close;
+
+      // Footer
+      document.getElementById('footer-text').innerText = t.footer_text;
+      document.getElementById('footer-sub').innerText = t.footer_sub;
+
+      // Quick prompts
+      const promptsContainer = document.getElementById('quick-prompts-container');
+      promptsContainer.innerHTML = `
+        <span class="text-slate-500 font-medium">${t.try_asking}</span>
+        ${t.prompts.map(p => `
+          <button onclick="setQuery('${p.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 hover:border-blue-400 px-3 py-1 rounded-full text-slate-700 transition-all shadow-xs">
+            "${p}"
+          </button>
+        `).join('')}
+      `;
+    }
+
+    function populateFilterOptions() {
+      const t = UI_I18N[currentLang] || UI_I18N.en;
+      const o = t.opts;
+
+      // 1. Category select
+      const prevCat = document.getElementById('filter-category').value;
+      document.getElementById('filter-category').innerHTML = `
+        <option value="">${o.cat_all}</option>
+        <option value="education">${t.categories.education}</option>
+        <option value="agriculture">${t.categories.agriculture}</option>
+        <option value="women_child">${t.categories.women_child}</option>
+        <option value="business">${t.categories.business}</option>
+        <option value="healthcare">${t.categories.healthcare}</option>
+        <option value="housing">${t.categories.housing}</option>
+        <option value="employment_pension">${t.categories.employment_pension}</option>
+      `;
+      document.getElementById('filter-category').value = prevCat;
+
+      // 2. Level select
+      const prevLevel = document.getElementById('filter-level').value;
+      document.getElementById('filter-level').innerHTML = `
+        <option value="">${o.level_all}</option>
+        <option value="Central">${o.level_cen}</option>
+        <option value="State">${o.level_sta}</option>
+      `;
+      document.getElementById('filter-level').value = prevLevel;
+
+      // 3. State select
+      const prevState = document.getElementById('filter-state').value;
+      document.getElementById('filter-state').innerHTML = `
+        <option value="">${o.state_all}</option>
+        <option value="Haryana">Haryana (हरियाणा)</option>
+        <option value="Maharashtra">Maharashtra (महाराष्ट्र)</option>
+        <option value="Punjab">Punjab (ਪੰਜਾਬ)</option>
+        <option value="West Bengal">West Bengal (পশ্চিমবঙ্গ)</option>
+        <option value="Telangana">Telangana (తెలంగాణ)</option>
+        <option value="Uttar Pradesh">Uttar Pradesh (उत्तर प्रदेश)</option>
+        <option value="Rajasthan">Rajasthan (राजस्थान)</option>
+        <option value="Karnataka">Karnataka (ಕರ್ನಾಟಕ)</option>
+        <option value="Bihar">Bihar (बिहार)</option>
+      `;
+      document.getElementById('filter-state').value = prevState;
+
+      // 4. Beneficiary select
+      const prevBen = document.getElementById('filter-beneficiary').value;
+      document.getElementById('filter-beneficiary').innerHTML = `
+        <option value="">${o.ben_all}</option>
+        <option value="student">${o.ben_stu}</option>
+        <option value="farmer">${o.ben_far}</option>
+        <option value="women">${o.ben_wom}</option>
+        <option value="senior">${o.ben_sen}</option>
+        <option value="entrepreneur">${o.ben_ent}</option>
+        <option value="artisan">${o.ben_art}</option>
+      `;
+      document.getElementById('filter-beneficiary').value = prevBen;
+
+      // 5. Age group select
+      const prevAge = document.getElementById('filter-age-group').value;
+      document.getElementById('filter-age-group').innerHTML = `
+        <option value="">${o.age_all}</option>
+        <option value="under_18">${o.age_u18}</option>
+        <option value="18_25">${o.age_18_25}</option>
+        <option value="26_40">${o.age_26_40}</option>
+        <option value="41_60">${o.age_41_60}</option>
+        <option value="60_plus">${o.age_60p}</option>
+      `;
+      document.getElementById('filter-age-group').value = prevAge;
+
+      // 6. Income select
+      const prevInc = document.getElementById('filter-income').value;
+      document.getElementById('filter-income').innerHTML = `
+        <option value="">${o.inc_all}</option>
+        <option value="100000">${o.inc_1}</option>
+        <option value="180000">${o.inc_18}</option>
+        <option value="250000">${o.inc_25}</option>
+        <option value="500000">${o.inc_5}</option>
+        <option value="800000">${o.inc_8}</option>
+      `;
+      document.getElementById('filter-income').value = prevInc;
+
+      // 7. Social category select
+      const prevSoc = document.getElementById('filter-social').value;
+      document.getElementById('filter-social').innerHTML = `
+        <option value="">${o.soc_all}</option>
+        <option value="General">General</option>
+        <option value="SC">SC (Scheduled Caste)</option>
+        <option value="ST">ST (Scheduled Tribe)</option>
+        <option value="OBC">OBC (Other Backward Class)</option>
+        <option value="EWS">EWS</option>
+      `;
+      document.getElementById('filter-social').value = prevSoc;
+
+      // 8. Benefit type select
+      const prevBtype = document.getElementById('filter-benefit-type').value;
+      document.getElementById('filter-benefit-type').innerHTML = `
+        <option value="">${o.btype_all}</option>
+        <option value="grant">${o.btype_grant}</option>
+        <option value="scholarship">${o.btype_sch}</option>
+        <option value="subsidy">${o.btype_sub}</option>
+        <option value="loan">${o.btype_loan}</option>
+        <option value="pension">${o.btype_pen}</option>
+        <option value="insurance">${o.btype_ins}</option>
+      `;
+      document.getElementById('filter-benefit-type').value = prevBtype;
+
+      // 9. Status select
+      const prevStat = document.getElementById('filter-status').value;
+      document.getElementById('filter-status').innerHTML = `
+        <option value="">${o.stat_all}</option>
+        <option value="year_round">${o.stat_yr}</option>
+        <option value="open">${o.stat_open}</option>
+        <option value="seasonal">${o.stat_sea}</option>
+        <option value="closed_check_extension">${o.stat_clo}</option>
+        <option value="needs_verification">${o.stat_ver}</option>
+      `;
+      document.getElementById('filter-status').value = prevStat;
+
+      // 10. Sort select
+      const prevSort = document.getElementById('filter-sort').value;
+      document.getElementById('filter-sort').innerHTML = `
+        <option value="relevance">${o.sort_rel}</option>
+        <option value="benefit">${o.sort_ben}</option>
+        <option value="latest">${o.sort_lat}</option>
+        <option value="deadline">${o.sort_dea}</option>
+      `;
+      document.getElementById('filter-sort').value = prevSort;
+    }
+
+    function renderCategories() {
+      const t = UI_I18N[currentLang] || UI_I18N.en;
+      const container = document.getElementById('category-cards');
+      container.innerHTML = CATEGORIES_DATA.map(c => {
+        const catName = t.categories[c.key] || c.key;
+        return `
+          <button onclick="selectCategory('${c.key}')" 
+            class="p-3 rounded-xl border text-left transition-all ${currentCategory === c.key ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'}">
+            <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center mb-2">
+              <i class="fa-solid ${c.icon}"></i>
+            </div>
+            <div class="font-bold text-xs text-slate-900 truncate" title="${catName}">${catName}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">${c.count} ${t.schemes_unit}</div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectCategory(cat) {
+      currentCategory = (currentCategory === cat) ? '' : cat;
+      document.getElementById('filter-category').value = currentCategory;
+      renderCategories();
+      executeSearch();
+    }
+
+    function onCategorySelectChange() {
+      currentCategory = document.getElementById('filter-category').value;
+      renderCategories();
+      executeSearch();
+    }
+
+    function clearCategoryFilter() {
+      currentCategory = '';
+      document.getElementById('filter-category').value = '';
+      renderCategories();
+      executeSearch();
+    }
+
+    function setQuery(text) {
+      document.getElementById('search-query').value = text;
+      executeSearch();
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-category').value = '';
+      document.getElementById('filter-level').value = '';
+      document.getElementById('filter-state').value = '';
+      document.getElementById('filter-beneficiary').value = '';
+      document.getElementById('filter-age-group').value = '';
+      document.getElementById('filter-income').value = '';
+      document.getElementById('filter-social').value = '';
+      document.getElementById('filter-benefit-type').value = '';
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-sort').value = 'relevance';
+      currentCategory = '';
+      renderCategories();
+      executeSearch();
+    }
+
+    async function executeSearch() {
+      const query = document.getElementById('search-query').value;
+      const cat = document.getElementById('filter-category').value;
+      const level = document.getElementById('filter-level').value;
+      const state = document.getElementById('filter-state').value;
+      const beneficiary = document.getElementById('filter-beneficiary').value;
+      const ageGroup = document.getElementById('filter-age-group').value;
+      const income = document.getElementById('filter-income').value;
+      const social = document.getElementById('filter-social').value;
+      const benefitType = document.getElementById('filter-benefit-type').value;
+      const status = document.getElementById('filter-status').value;
+      const sort = document.getElementById('filter-sort').value;
+
+      const payload = {
+        query: query,
+        category: cat || null,
+        level: level || null,
+        state: state || null,
+        beneficiary: beneficiary || null,
+        age_group: ageGroup || null,
+        family_income: income ? parseFloat(income) : null,
+        social_category: social || null,
+        benefit_type: benefitType || null,
+        status: status || null,
+        sort_by: sort,
+        lang: currentLang,
+        top_k: 30
+      };
+
+      const t = UI_I18N[currentLang] || UI_I18N.en;
+      const container = document.getElementById('schemes-container');
+      container.innerHTML = `<div class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl mr-2 text-blue-600"></i> ${t.searching}</div>`;
+
+      try {
+        const res = await fetch('/search', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        renderResults(data);
+      } catch (err) {
+        container.innerHTML = `<div class="p-8 text-center text-rose-500 font-medium">Failed to fetch schemes: ${err.message}</div>`;
+      }
+    }
+
+    function renderResults(data) {
+      const t = UI_I18N[currentLang] || UI_I18N.en;
+      const total = data.total_matches || 0;
+      document.getElementById('results-count').innerHTML = t.found_count.replace('{n}', `<span class="font-bold text-slate-900">${total}</span>`);
+      
+      const container = document.getElementById('schemes-container');
+      const results = data.results || [];
+
+      if (results.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white p-12 text-center rounded-2xl border border-slate-200 space-y-3 shadow-xs">
+            <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+              <i class="fa-solid fa-filter-circle-xmark text-xl"></i>
+            </div>
+            <h4 class="font-bold text-slate-800">${t.no_res_title}</h4>
+            <p class="text-xs text-slate-500">${t.no_res_sub}</p>
+            <button onclick="resetFilters()" class="text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-xl shadow-xs">${t.reset_all_btn}</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = results.map(s => {
+        const ind = s.indicators;
+        const isVerified = s.verified;
+        const badgeColor = s.status === 'year_round' || s.status === 'open' 
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+          : 'bg-amber-50 text-amber-700 border-amber-200';
+        
+        let verdictBadge = 'bg-blue-50 text-blue-700 border-blue-200';
+        if (ind.eligibility_verdict === 'meets_listed_conditions') verdictBadge = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        else if (ind.eligibility_verdict === 'not_eligible') verdictBadge = 'bg-rose-50 text-rose-700 border-rose-200';
+
+        // Display localized name prominently when available
+        const mainTitle = (currentLang !== 'en' && s.name_local) ? s.name_local : s.name;
+        const subTitle = (currentLang !== 'en' && s.name_local && s.name_local !== s.name) ? `${s.name} · ${s.ministry || ''}` : (s.ministry || '');
+        const displayPurpose = s.purpose_local || s.purpose;
+        const statusLabel = s.status_local || s.status.replace('_', ' ').toUpperCase();
+        const benefitTypeLabel = s.benefit_type_local || s.benefit_type;
+        const verdictLabel = ind.eligibility_verdict_label || ind.eligibility_match;
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all space-y-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="space-y-1 max-w-xl">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">${s.id}</span>
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeColor} border">${statusLabel}</span>
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">${s.level} ${s.state ? '('+s.state+')' : ''}</span>
+                  ${isVerified 
+                    ? `<span class="text-[10px] font-semibold text-emerald-700 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> ${t.web_verified}</span>` 
+                    : `<span class="text-[10px] text-amber-600 flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> ${t.verify_source}</span>`}
+                </div>
+                <h4 class="text-base font-bold text-slate-900 leading-snug">${mainTitle}</h4>
+                <div class="text-xs text-slate-500">${subTitle}</div>
+              </div>
+
+              <!-- BENEFIT BADGE -->
+              <div class="text-right bg-blue-50/70 border border-blue-100 p-2.5 rounded-xl min-w-[130px]">
+                <div class="text-[10px] font-semibold text-blue-700 uppercase tracking-wider">${t.benefit_badge}</div>
+                <div class="text-sm font-extrabold text-blue-900">${s.benefit_display}</div>
+                <div class="text-[10px] text-slate-500 capitalize">${benefitTypeLabel}</div>
+              </div>
+            </div>
+
+            <!-- LOCALIZED PURPOSE -->
+            <p class="text-xs text-slate-700 leading-relaxed bg-slate-50/60 p-3 rounded-xl border border-slate-100">
+              ${displayPurpose}
+            </p>
+
+            <!-- 3 VISUAL INDICATORS -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+              <!-- Indicator 1: Eligibility -->
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs">
+                  <i class="fa-solid fa-user-check"></i>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-400 font-medium">${t.ind_eligibility}</div>
+                  <div class="font-bold text-slate-800">${verdictLabel}</div>
+                </div>
+              </div>
+
+              <!-- Indicator 2: Financial Benefit -->
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-xs">
+                  <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-400 font-medium">${t.ind_type}</div>
+                  <div class="font-bold text-slate-800 capitalize">${benefitTypeLabel}</div>
+                </div>
+              </div>
+
+              <!-- Indicator 3: Document Readiness -->
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-amber-600 shadow-xs">
+                  <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-400 font-medium">${t.ind_docs}</div>
+                  <div class="font-bold text-slate-800">${s.documents.length} ${t.schemes_unit === 'schemes' ? 'required' : 'जरूरी'}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+              <div class="flex items-center gap-2">
+                <button onclick="openExplainModal('${s.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
+                  <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> ${t.btn_explain}
+                </button>
+                <a href="${s.official_url}" target="_blank" rel="noopener" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all">
+                  <span>${t.btn_portal}</span> <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+              </div>
+              ${s.official_pdf_url ? `
+                <a href="${s.official_pdf_url}" target="_blank" rel="noopener" class="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1">
+                  <i class="fa-regular fa-file-pdf text-rose-500"></i> ${t.btn_pdf}
+                </a>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function openExplainModal(schemeId) {
+      const t = UI_I18N[currentLang] || UI_I18N.en;
+      document.getElementById('explain-modal').classList.remove('hidden');
+      const query = document.getElementById('search-query').value || "Tell me about this scheme and my eligibility";
+      document.getElementById('modal-content').innerHTML = `
+        <div class="flex items-center justify-center py-8 text-slate-500">
+          <i class="fa-solid fa-circle-notch fa-spin text-2xl mr-3 text-blue-600"></i> ${t.modal_loading}
+        </div>
+      `;
+
+      try {
+        const res = await fetch('/explain', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            scheme_id: schemeId,
+            query: query,
+            lang: currentLang
+          })
+        });
+        const data = await res.json();
+        const modalTitle = (currentLang !== 'en' && data.scheme_name_local) ? `${data.scheme_name_local} (${data.scheme_name})` : data.scheme_name;
+        document.getElementById('modal-scheme-title').innerText = modalTitle;
+        document.getElementById('modal-content').innerHTML = `
+          <div class="space-y-4">
+            <div class="bg-blue-50/80 p-4 rounded-xl border border-blue-200 whitespace-pre-line text-slate-800 text-xs sm:text-sm leading-relaxed">
+              ${data.explanation}
+            </div>
+            <div class="text-xs text-slate-500 space-y-1">
+              <div class="font-bold text-slate-700">${t.modal_sources}</div>
+              <ul class="list-disc pl-5 space-y-1">
+                ${(data.sources || []).map(src => `<li><a href="${src}" target="_blank" class="text-blue-600 hover:underline break-all">${src}</a></li>`).join('')}
+              </ul>
+            </div>
+            <div class="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+              ${t.modal_verified.replace('{d}', data.last_verified || '2026-11-02')}
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('modal-content').innerHTML = `<div class="text-rose-500 font-medium">Failed to generate explanation: ${err.message}</div>`;
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('explain-modal').classList.add('hidden');
+    }
+
+    // Initialize on page load
+    window.onload = () => {
+      applyTranslations(currentLang);
+      renderCategories();
+      populateFilterOptions();
+      executeSearch();
+    };
+  </script>
+</body>
+</html>
