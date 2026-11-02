@@ -81,18 +81,24 @@
           <div class="pl-4 pr-2 text-slate-400">
             <i class="fa-solid fa-magnifying-glass text-lg"></i>
           </div>
-          <input 
-            type="text" 
-            id="search-query" 
-            placeholder="Search schemes: 'farmer loan with subsidy', 'स्कॉलरशिप चाहिए', 'महिलांसाठी योजना'..." 
+          <input
+            type="text"
+            id="search-query"
+            placeholder="Search schemes: 'farmer loan with subsidy', 'स्कॉलरशिप चाहिए', 'महिलांसाठी योजना'..."
             class="w-full py-2.5 text-slate-800 text-sm sm:text-base focus:outline-none bg-transparent"
             onkeydown="if(event.key === 'Enter') executeSearch()"
           />
-          <button 
-            onclick="executeSearch()" 
-            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2">
+          <button
+            onclick="executeSearch()"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5">
             <span id="search-btn-text">Search</span>
-            <i class="fa-solid fa-arrow-right text-xs"></i>
+            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+          </button>
+          <button
+            onclick="askRAG()"
+            class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5 ml-1">
+            <i class="fa-solid fa-brain text-xs"></i>
+            <span id="rag-btn-text">RAG Assistant</span>
           </button>
         </div>
       </div>
@@ -213,6 +219,28 @@
 
       <!-- RIGHT COLUMN: SCHEME RESULTS -->
       <section class="lg:col-span-3 space-y-4">
+        <!-- RAG GROUNDED ANSWER BOX (HIDDEN UNTIL QUERIED) -->
+        <div id="rag-box" class="hidden bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-300 rounded-2xl p-5 shadow-sm space-y-3">
+          <div class="flex items-center justify-between border-b border-emerald-200/80 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base shadow-sm">
+                <i class="fa-solid fa-brain"></i>
+              </span>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                  BHASHA SAHITA RAG Assistant <span class="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-300">Grounded in Official Guidelines</span>
+                </h3>
+                <div class="text-[11px] text-slate-500">Multilingual Scheme Synthesis · Official Citations · Deterministic Rules</div>
+              </div>
+            </div>
+            <button onclick="document.getElementById('rag-box').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">&times;</button>
+          </div>
+          <div id="rag-answer-content" class="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-line space-y-2 font-normal">
+          </div>
+          <div id="rag-citations" class="pt-3 border-t border-emerald-200/60 text-xs text-slate-600 space-y-1">
+          </div>
+        </div>
+
         <!-- SEARCH META BAR -->
         <div class="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-600 shadow-sm">
           <div id="results-count" class="font-medium">
@@ -379,8 +407,8 @@
         search_btn: "खोजें",
         try_asking: "पूछ कर देखें:",
         prompts: [
+          "मुझे हरियाणा में किसानों के लिए कौन-सी सरकारी योजनाएं मिल सकती हैं?",
           "मुझे कॉलेज के लिए छात्रवृत्ति चाहिए",
-          "किसानों के लिए फसल सहायता और ऋण",
           "70 वर्ष से अधिक के लिए मुफ्त स्वास्थ्य बीमा",
           "महिलाओं के लिए मासिक आर्थिक सहायता योजना"
         ],
@@ -1127,7 +1155,7 @@
       container.innerHTML = CATEGORIES_DATA.map(c => {
         const catName = t.categories[c.key] || c.key;
         return `
-          <button onclick="selectCategory('${c.key}')" 
+          <button onclick="selectCategory('${c.key}')"
             class="p-3 rounded-xl border text-left transition-all ${currentCategory === c.key ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'}">
             <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center mb-2">
               <i class="fa-solid ${c.icon}"></i>
@@ -1230,7 +1258,7 @@
       const t = UI_I18N[currentLang] || UI_I18N.en;
       const total = data.total_matches || 0;
       document.getElementById('results-count').innerHTML = t.found_count.replace('{n}', `<span class="font-bold text-slate-900">${total}</span>`);
-      
+
       const container = document.getElementById('schemes-container');
       const results = data.results || [];
 
@@ -1251,10 +1279,10 @@
       container.innerHTML = results.map(s => {
         const ind = s.indicators;
         const isVerified = s.verified;
-        const badgeColor = s.status === 'year_round' || s.status === 'open' 
-          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+        const badgeColor = s.status === 'year_round' || s.status === 'open'
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
           : 'bg-amber-50 text-amber-700 border-amber-200';
-        
+
         let verdictBadge = 'bg-blue-50 text-blue-700 border-blue-200';
         if (ind.eligibility_verdict === 'meets_listed_conditions') verdictBadge = 'bg-emerald-50 text-emerald-700 border-emerald-200';
         else if (ind.eligibility_verdict === 'not_eligible') verdictBadge = 'bg-rose-50 text-rose-700 border-rose-200';
@@ -1275,8 +1303,8 @@
                   <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">${s.id}</span>
                   <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeColor} border">${statusLabel}</span>
                   <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">${s.level} ${s.state ? '('+s.state+')' : ''}</span>
-                  ${isVerified 
-                    ? `<span class="text-[10px] font-semibold text-emerald-700 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> ${t.web_verified}</span>` 
+                  ${isVerified
+                    ? `<span class="text-[10px] font-semibold text-emerald-700 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> ${t.web_verified}</span>`
                     : `<span class="text-[10px] text-amber-600 flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> ${t.verify_source}</span>`}
                 </div>
                 <h4 class="text-base font-bold text-slate-900 leading-snug">${mainTitle}</h4>
@@ -1298,39 +1326,64 @@
 
             <!-- 3 VISUAL INDICATORS -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-              <!-- Indicator 1: Eligibility -->
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs">
+              <!-- Indicator 1: Eligibility Match -->
+              <div class="flex items-center gap-2.5 p-1 rounded-lg">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs flex-shrink-0">
                   <i class="fa-solid fa-user-check"></i>
                 </div>
-                <div>
+                <div class="overflow-hidden">
                   <div class="text-[10px] text-slate-400 font-medium">${t.ind_eligibility}</div>
-                  <div class="font-bold text-slate-800">${verdictLabel}</div>
+                  <div class="font-bold text-slate-800 truncate">${verdictLabel}</div>
+                  <div class="text-[10px] text-slate-500">${ind.eligibility_match}</div>
                 </div>
               </div>
 
-              <!-- Indicator 2: Financial Benefit -->
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-xs">
+              <!-- Indicator 2: Benefit Details -->
+              <div class="flex items-center gap-2.5 p-1 rounded-lg">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-xs flex-shrink-0">
                   <i class="fa-solid fa-indian-rupee-sign"></i>
                 </div>
-                <div>
+                <div class="overflow-hidden">
                   <div class="text-[10px] text-slate-400 font-medium">${t.ind_type}</div>
-                  <div class="font-bold text-slate-800 capitalize">${benefitTypeLabel}</div>
+                  <div class="font-bold text-slate-800 capitalize truncate">${benefitTypeLabel}</div>
+                  <div class="text-[10px] text-slate-500 truncate">${s.benefit_details ? s.benefit_details.summary : ind.financial_benefit}</div>
                 </div>
               </div>
 
               <!-- Indicator 3: Document Readiness -->
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-amber-600 shadow-xs">
+              <div class="flex items-center gap-2.5 p-1 rounded-lg">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-amber-600 shadow-xs flex-shrink-0">
                   <i class="fa-solid fa-folder-open"></i>
                 </div>
-                <div>
+                <div class="overflow-hidden">
                   <div class="text-[10px] text-slate-400 font-medium">${t.ind_docs}</div>
-                  <div class="font-bold text-slate-800">${s.documents.length} ${t.schemes_unit === 'schemes' ? 'required' : 'जरूरी'}</div>
+                  <div class="font-bold text-slate-800">${s.document_readiness ? s.document_readiness.available.length + '/' + s.documents.length : ind.document_readiness}</div>
+                  <div class="text-[10px] text-slate-500 truncate" title="${s.documents.join(', ')}">${s.documents.length} ${t.schemes_unit === 'schemes' ? 'required' : 'जरूरी'}</div>
                 </div>
               </div>
             </div>
+
+            <!-- RETRIEVED OFFICIAL GUIDELINE CHUNKS (IF RETRIEVED VIA RAG) -->
+            ${(s.retrieved_chunks && s.retrieved_chunks.length > 0) ? `
+              <div class="pt-1">
+                <button onclick="toggleChunks('${s.id}')" class="text-[11px] text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-1.5 transition-colors">
+                  <i class="fa-solid fa-file-contract text-emerald-600"></i>
+                  <span>Retrieved Official Guideline Chunks (${s.retrieved_chunks.length})</span>
+                  <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                </button>
+                <div id="chunks-${s.id}" class="hidden mt-2 space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+                  ${s.retrieved_chunks.map(chk => `
+                    <div class="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs space-y-1">
+                      <div class="flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                        <span class="font-bold text-slate-700">${chk.document_title || s.name} · ${chk.section || 'Guidelines'}</span>
+                        <span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-semibold">Page ${chk.page_number || 1}</span>
+                      </div>
+                      <p class="text-slate-700 text-[11px] leading-relaxed">${chk.text}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
 
             <!-- ACTION BUTTONS -->
             <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
@@ -1394,6 +1447,69 @@
         `;
       } catch (err) {
         document.getElementById('modal-content').innerHTML = `<div class="text-rose-500 font-medium">Failed to generate explanation: ${err.message}</div>`;
+      }
+    }
+
+    async function askRAG() {
+      const query = document.getElementById('search-query').value.trim();
+      if (!query) {
+        alert("Please enter a question or scheme requirement for the RAG Assistant.");
+        return;
+      }
+      const ragBox = document.getElementById('rag-box');
+      const content = document.getElementById('rag-answer-content');
+      const citations = document.getElementById('rag-citations');
+
+      ragBox.classList.remove('hidden');
+      content.innerHTML = `<div class="p-6 text-center text-slate-500"><i class="fa-solid fa-brain fa-bounce text-2xl mr-2 text-emerald-600"></i> Synthesizing grounded response from official government scheme guidelines...</div>`;
+      citations.innerHTML = '';
+
+      try {
+        const res = await fetch('/rag/answer', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: query,
+            lang: currentLang,
+            top_k: 5
+          })
+        });
+        const data = await res.json();
+        content.innerHTML = data.answer.replace(/\n/g, '<br/>');
+
+        if (data.citations && data.citations.length > 0) {
+          citations.innerHTML = `
+            <div class="font-bold text-slate-700 flex items-center gap-1.5 mb-2">
+              <i class="fa-solid fa-book-bookmark text-emerald-600"></i> Official Citations & Grounded Guidelines:
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              ${data.citations.map(c => `
+                <div class="bg-white p-2.5 rounded-xl border border-emerald-200/80 shadow-xs flex items-center justify-between text-xs">
+                  <div class="truncate mr-2">
+                    <div class="font-bold text-slate-800">${c.scheme_name}</div>
+                    <div class="text-[10px] text-slate-500">${c.document_title} · Page ${c.pages.join(', ')}</div>
+                  </div>
+                  <a href="${c.official_url}" target="_blank" rel="noopener" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 flex-shrink-0">
+                    Portal <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+                  </a>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        if (data.schemes && data.schemes.length > 0) {
+          renderResults({ total_matches: data.schemes.length, results: data.schemes });
+        }
+      } catch (err) {
+        content.innerHTML = `<div class="text-rose-600 font-semibold p-4">Failed to generate RAG response: ${err.message}</div>`;
+      }
+    }
+
+    function toggleChunks(schemeId) {
+      const el = document.getElementById(`chunks-${schemeId}`);
+      if (el) {
+        el.classList.toggle('hidden');
       }
     }
 

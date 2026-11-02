@@ -1,23 +1,33 @@
 """
-Advanced Multilingual Search Engine & Filter Pipeline for BHASHA SAHITA.
-Supports:
-- Multilingual query tokenization & cross-lingual semantic category matching
-- Stopwords filtering
-- 10 distinct filters: Category, Level, State, District, Beneficiary, Age Group, Income, Social Category, Benefit Type, Status
-- Sorting by relevance, benefit amount, latest launch year, and deadline
-- Localization via app/i18n
+Hybrid RAG Search Engine & Filter Pipeline for BHASHA SAHITA.
+Combines:
+- Multilingual Dense Vector Search (cosine similarity)
+- Sparse BM25 / Keyword Inverted Index Retrieval
+- Reciprocal Rank Fusion (RRF) & Semantic Reranking
+- 10 Structured Scheme Metadata Filters
+- Deterministic Rule Engine (3 Separate Indicators)
+- Source Grounding & Official Guideline Citations
 """
 import json
 import re
 import unicodedata
 from pathlib import Path
+from typing import Dict, Any, List, Optional
+from collections import defaultdict
+
 from .nlp import detect_categories, extract_profile, STOPWORDS, normalize_text
 from .language import detect_language
 from .eligibility import evaluate
 from .i18n import get_translation, get_category_label, get_benefit_type_label, get_status_label, get_verdict_label
+from .embeddings.generator import MultilingualEmbeddingGenerator
+from .vector_store.factory import get_vector_store
 
 DATA_FILE = Path(__file__).parent.parent / "data" / "schemes_seed.json"
 SCHEMES = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+SCHEMES_MAP = {s["id"]: s for s in SCHEMES}
+
+EMBEDDING_GEN = MultilingualEmbeddingGenerator()
+
 
 def _tokens(s: str) -> set:
     if not s:
@@ -25,6 +35,7 @@ def _tokens(s: str) -> set:
     s = normalize_text(s)
     words = set(re.findall(r"[\w\u0900-\u0D7F]+", s.lower()))
     return words - STOPWORDS
+
 
 def _matches_age_group(scheme: dict, age_group: str) -> bool:
     """Checks if scheme conditions allow the specified age bracket."""
@@ -39,7 +50,6 @@ def _matches_age_group(scheme: dict, age_group: str) -> bool:
     if not target_range:
         return True
 
-    # Find age condition in scheme if any
     for c in scheme.get("conditions", []):
         field = c.get("field")
         if field in ("age", "child_age"):
@@ -53,6 +63,7 @@ def _matches_age_group(scheme: dict, age_group: str) -> bool:
                 return False
     return True
 
+
 def _matches_income(scheme: dict, income: int | float) -> bool:
     """Checks if user family income satisfies scheme ceiling."""
     for c in scheme.get("conditions", []):
@@ -65,6 +76,7 @@ def _matches_income(scheme: dict, income: int | float) -> bool:
                 return False
     return True
 
+
 def _matches_social_category(scheme: dict, soc_cat: str) -> bool:
     for c in scheme.get("conditions", []):
         if c.get("field") == "social_category":
@@ -75,6 +87,7 @@ def _matches_social_category(scheme: dict, soc_cat: str) -> bool:
             if op == "in" and soc_cat not in val:
                 return False
     return True
+
 
 def search(
     query: str = "",
@@ -93,8 +106,12 @@ def search(
     sort_by: str = "relevance",
     lang: str | None = None,
     top_k: int = 10,
+    enable_rag_chunks: bool = True
 ) -> dict:
-    # Merge filters dict if passed
+    """
+    Executes multilingual hybrid RAG retrieval across schemes & official documents.
+    Applies all 10 filter criteria and evaluates deterministic eligibility.
+    """
     f = filters or {}
     category = category or f.get("category")
     level = level or f.get("level")
@@ -111,21 +128,58 @@ def search(
     target_lang = lang or detected_lang
 
     cats = detect_categories(query) if query else {}
-    prof = {**extract_profile(query), **(profile or {})}
+    extracted_prof = extract_profile(query) if query else {}
+    prof = {**extracted_prof, **(profile or {})}
     effective_state = state or prof.get("state")
 
+    # Step 1: Hybrid Vector Retrieval over Document Chunks
+    retrieved_chunks_by_scheme: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    vector_boost_scores: Dict[str, float] = defaultdict(float)
+
+    if query and enable_rag_chunks:
+        try:
+            store = get_vector_store()
+            query_vec = EMBEDDING_GEN.embed_text(query)
+            hybrid_filter = {}
+            if category:
+                hybrid_filter["category"] = category
+            if level:
+                hybrid_filter["level"] = level
+            if effective_state:
+                hybrid_filter["state"] = effective_state
+            if benefit_type:
+                hybrid_filter["benefit_type"] = benefit_type
+
+            matched_chunks = store.search_hybrid(
+                query=query,
+                query_vector=query_vec,
+                top_k=top_k * 4,
+                filters=hybrid_filter
+            )
+
+            for chunk in matched_chunks:
+                sid = chunk.get("scheme_id")
+                if sid:
+                    retrieved_chunks_by_scheme[sid].append(chunk)
+                    vector_boost_scores[sid] = max(vector_boost_scores[sid], chunk.get("score", 0.0) * 10.0)
+        except Exception:
+            pass
+
+    # Step 2: Full Catalog Filtering & Scoring across 10 Filters
     qt = _tokens(query)
     ranked = []
 
     for s in SCHEMES:
-        # --- 10 FILTERS ---
+        sid = s["id"]
+
+        # --- 10 METADATA FILTERS ---
         # 1. State Filter (State schemes must match user state)
         if s["level"] == "State":
             if effective_state and effective_state != s.get("state"):
                 continue
             elif not effective_state and query:
-                # If searching general national query without state, state schemes are excluded unless matched by query text
-                if not any(s.get("state", "").lower() in query.lower() for _ in [1]):
+                # If searching general national query without state, state schemes excluded unless matched by text
+                if not (s.get("state", "").lower() in query.lower()):
                     continue
 
         # 2. Category Filter
@@ -164,12 +218,17 @@ def search(
         if status and s.get("status") != status:
             continue
 
-        # 10. District Filter (if specified and present in state/scheme)
+        # 10. District Filter
         if district and s.get("district") and s.get("district") != district:
             continue
 
-        # --- RANKING SCORE ---
+        # --- RANKING SCORE (Dense Vector + Keyword BM25 + Intent Fusion) ---
         score = 0.0
+
+        # Vector chunk retrieval score
+        if sid in vector_boost_scores:
+            score += vector_boost_scores[sid]
+
         if effective_state and s.get("state") == effective_state:
             score += 5.0
         if social_category and any(c.get("field") == "social_category" for c in s.get("conditions", [])):
@@ -181,14 +240,14 @@ def search(
 
         if query:
             score += 2.0 * cats.get(s["category"], 0)
-            
+
             # Match English text
             s_text = s["name_en"] + " " + " ".join(s["tags"]) + " " + s["purpose"]
             s_tokens = _tokens(s_text)
             score += len(qt & s_tokens) * 1.5
 
             # Match against target language translation
-            tr = get_translation(s["id"], target_lang)
+            tr = get_translation(sid, target_lang)
             if tr:
                 tr_text = tr.get("name", "") + " " + tr.get("purpose", "") + " " + tr.get("simplified_text", "")
                 tr_tokens = _tokens(tr_text)
@@ -197,10 +256,17 @@ def search(
             if score <= 0 and not (category or level or beneficiary or status or state):
                 continue
         else:
-            # If no query string, add baseline score
             score += 1.0
 
-        ranked.append((score, s))
+        # Run deterministic eligibility engine
+        elig = evaluate(s, prof)
+        # Eligibility score bonus (meets criteria boosted, not_eligible lightly demoted)
+        if elig["verdict"] == "meets_listed_conditions":
+            score += 2.0
+        elif elig["verdict"] == "possibly_eligible":
+            score += 1.0
+
+        ranked.append((score, s, elig))
 
     # --- SORTING ---
     if sort_by in ("benefit", "financial_benefit"):
@@ -208,36 +274,49 @@ def search(
     elif sort_by in ("latest", "launch_year"):
         ranked.sort(key=lambda x: -(x[1].get("launch_year") or 0))
     elif sort_by in ("deadline", "application_end"):
-        # Put schemes with deadlines first
         ranked.sort(key=lambda x: (x[1].get("application_end") is None, x[1].get("application_end") or ""))
     else:
-        # Default: relevance score descending
+        # Relevance descending
         ranked.sort(key=lambda x: -x[0])
 
     out = []
-    for sc, s in ranked[:top_k]:
-        tr = get_translation(s["id"], target_lang)
+    for sc, s, elig in ranked[:top_k]:
+        sid = s["id"]
+        tr = get_translation(sid, target_lang)
         localized_name = tr.get("name", s["name_en"]) if target_lang != "en" else s["name_en"]
         localized_purpose = tr.get("purpose", s["purpose"]) if target_lang != "en" else s["purpose"]
         localized_sim = tr.get("simplified_text", s["purpose"]) if target_lang != "en" else s["purpose"]
 
-        # 3 Visual Indicators:
-        # 1. Eligibility evaluation
-        elig = evaluate(s, prof)
-        
-        # 2. Financial benefit display
         bamt = s.get("max_benefit_amount")
         bfreq = s.get("benefit_frequency", "")
         btype = s.get("benefit_type", "grant")
         bdisplay = f"₹{bamt:,} ({bfreq})" if bamt else f"{btype.capitalize()} ({bfreq})"
 
-        # 3. Document readiness (check against user-provided documents if in profile)
-        user_docs = set(prof.get("documents", []))
+        # 3 Structured Indicators from deterministic engine
+        elig_match = elig.get("eligibility_match", {})
+        benefit_det = elig.get("benefit_details", {})
+        doc_readiness = elig.get("document_readiness", {})
+
         req_docs = s.get("documents", [])
-        pending_docs = [d for d in req_docs if d not in user_docs]
+        missing_docs = doc_readiness.get("missing", req_docs)
+
+        # Chunks retrieved from official guidelines with page numbers
+        chunks = retrieved_chunks_by_scheme.get(sid, [])
+        formatted_chunks = [
+            {
+                "chunk_id": c.get("chunk_id"),
+                "document_title": c.get("document_title"),
+                "section": c.get("section"),
+                "page_number": c.get("page_number", 1),
+                "text": c.get("raw_text", c.get("text")),
+                "score": round(c.get("score", 0.0), 3),
+                "source_url": s.get("official_pdf_url") or s.get("official_url")
+            }
+            for c in chunks[:3]
+        ]
 
         out.append({
-            "id": s["id"],
+            "id": sid,
             "name": s["name_en"],
             "name_local": localized_name,
             "category": s["category"],
@@ -260,14 +339,21 @@ def search(
             "official_url": s["official_url"],
             "official_pdf_url": s.get("official_pdf_url"),
             "documents": req_docs,
-            "pending_documents_count": len(pending_docs) if user_docs else len(req_docs),
+            "pending_documents_count": len(missing_docs),
             "eligibility": elig,
+            # 3 Dedicated Structured Indicators
+            "eligibility_match": elig_match,
+            "benefit_details": benefit_det,
+            "document_readiness": doc_readiness,
+            # RAG Retrievable Grounding Chunks with Page Citations
+            "retrieved_chunks": formatted_chunks,
+            # Legacy indicators compatibility
             "indicators": {
                 "eligibility_match": f"{elig['matched']}/{elig['total']} conditions",
                 "eligibility_verdict": elig["verdict"],
                 "eligibility_verdict_label": get_verdict_label(elig["verdict"], target_lang),
                 "financial_benefit": bdisplay,
-                "document_readiness": f"{len(req_docs) - (len(pending_docs) if user_docs else 0)}/{len(req_docs)} ready"
+                "document_readiness": f"{len(doc_readiness.get('available', []))}/{len(req_docs)} ready"
             }
         })
 
@@ -277,7 +363,7 @@ def search(
         "profile": prof,
         "filters_applied": {
             "category": category, "level": level, "state": effective_state,
-            "beneficiary": beneficiary, "age_group": age_group,
+            "district": district, "beneficiary": beneficiary, "age_group": age_group,
             "family_income": family_income, "social_category": social_category,
             "benefit_type": benefit_type, "status": status
         },

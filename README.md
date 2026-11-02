@@ -1,79 +1,149 @@
 # BHASHA SAHITA (भाषा सहिता)
-Multilingual Government Scheme Discovery & Verified Eligibility Engine.
-Supports 6 languages (English, हिन्दी, मराठी, ਪੰਜਾਬੀ, తెలుగు, বাংলা), 100 verified schemes across Central and 9 States, 10 filter controls, and source-grounded explanations.
+Multilingual, RAG-First Government Scheme Discovery & Verified Eligibility Engine.
 
-## Quick Start
+BHASHA SAHITA retrieves information from official government documents (PDFs, circulars, notifications) and uses retrieved chunks to answer user queries with precise citations.
+
+> **Core Architectural Principle**:
+> *RAG handles scheme discovery, document retrieval, and contextual explanations. The eligibility engine remains strictly deterministic so that eligibility decisions are never guessed or fabricated by an AI model.*
+
+---
+
+## 1. Overall Architecture
+
+```
+DATA PIPELINE                              USER PIPELINE
+Central Govt Sources                       User Query (en, hi, mr, pa, te, bn)
+State Govt Sources (HR, MH, PB, WB, TG)         │
+       │                                        ▼
+Official PDFs / Guidelines / Portals       Language Detection (6 Indic Languages)
+       │                                        │
+Document Collection (app/ingestion/collector)   ▼
+       │                                   Query Understanding (app/nlp)
+PDF / HTML / Text Extraction (extractor)        │
+       │                                        ▼
+Text Cleaning & Indic NFC Normalization    Query Multilingual Embedding (app/embeddings)
+       │                                        │
+Metadata Extraction (metadata_extractor)        ▼
+       │                                   Hybrid Retrieval (Vector + BM25)
+Semantic Chunking (with page & headers)         │
+       │                                        ▼
+Multilingual Embeddings (app/embeddings)   Metadata Filtering (10 Scheme Filters)
+       │                                        │
+Vector Database (PostgreSQL+pgvector /     Reranking (Score & Relevance Blending)
+LocalVectorStore fallback)                      │
+                                                ▼
+                                           Retrieved Document Chunks
+                                                │
+                                                ├──────────────────────────────┐
+                                                ▼                              ▼
+                                      Deterministic Engine           RAG Context Builder
+                                    (app/eligibility - 3 Indicators) (Page & Section citations)
+                                                │                              │
+                                                └──────────────┬───────────────┘
+                                                               ▼
+                                                    Answer Generation (app/rag)
+                                                               │
+                                                               ▼
+                                                    Multilingual Grounded Response
+                                                    (Sources + Eligibility + Dashboard)
+```
+
+---
+
+## 2. Key Components & Responsibilities
+
+### Data Ingestion Pipeline (`app/ingestion/`)
+- **`extractor.py`**: Extracts structured text and page numbers from official PDF guidelines using PyMuPDF (`pymupdf`), HTML pages, and text documents with OCR fallback.
+- **`cleaner.py`**: Normalizes Indic scripts via Unicode NFC, cleans whitespace, removes navigation headers, footers, and boilerplate legal disclaimers.
+- **`metadata_extractor.py`**: Extracts structured schema metadata: scheme name, category, subcategory, state, level, beneficiary, age criteria, income ceilings, social categories, financial & non-financial benefits, required documents, deadlines, and portal URLs.
+- **`chunker.py`**: Splits documents into semantic chunks (200–350 words) with context headers: `[Scheme: <Name> | ID: <ID> | Level: <L> | State: <S> | Section: <H> | Page: <P>]`.
+- **`collector.py`**: Generates and manages official guideline documents for all Central and State schemes in `data/documents/`.
+
+### Multilingual Embeddings (`app/embeddings/`)
+- **`generator.py`**: Generates dense 256-dimensional multilingual vector representations for document chunks and user queries across English, Hindi, Marathi, Punjabi, Telugu, and Bengali. Supports cross-lingual semantic alignment and unit L2 normalization.
+
+### Vector Storage (`app/vector_store/`)
+- **`base.py`**: Abstract Base Class defining standard vector store operations.
+- **`local_store.py`**: High-performance embedded vector store combining NumPy cosine similarity, BM25 inverted index, Reciprocal Rank Fusion (RRF), and full metadata filtering.
+- **`pgvector_store.py`**: PostgreSQL + `pgvector` implementation for relational storage with vector cosine distance (`<=>`) and JSONB querying.
+- **`factory.py`**: Automatically connects to PostgreSQL + `pgvector` if `DATABASE_URL` is configured, or seamlessly falls back to `LocalVectorStore`.
+
+### Hybrid Retrieval & Reranking (`app/search.py`)
+- Blends dense vector search scores with sparse BM25 keyword matching via Reciprocal Rank Fusion.
+- Enforces all **10 structured metadata filters**:
+  1. Category (7 categories)
+  2. Government level (Central / State)
+  3. State (Haryana, Maharashtra, Punjab, West Bengal, Telangana, UP, Rajasthan, Karnataka, Bihar)
+  4. District (Rewari, Ambala, Hisar, Pune, Amritsar, Kolkata, etc.)
+  5. Beneficiary (Farmer, Student, Woman, Senior Citizen, Entrepreneur, Artisan)
+  6. Age group (Under 18, 18-25, 26-40, 41-60, 60+)
+  7. Family income (1L, 1.8L, 2.5L, 5L, 8L)
+  8. Social category (General, SC, ST, OBC, EWS)
+  9. Benefit type (Grant, Subsidy, Loan, Pension, Insurance, Scholarship)
+  10. Application status (Open, Year-round, Seasonal, Closed, Needs verification)
+- Reranks results using semantic relevance, intent match, and eligibility weighting.
+
+### Deterministic Eligibility Rule Engine (`app/eligibility.py`)
+*Rules decide eligibility, never the AI model.*
+Computes and returns **3 separate structured indicators**:
+1. **Eligibility Match**:
+   - Verdict: `meets_listed_conditions` / `possibly_eligible` / `not_eligible`
+   - Matched, pending, and failed condition counts
+   - Detailed condition breakdown (unknown conditions remain pending, never assumed satisfied).
+2. **Benefit Details**:
+   - Benefit amount (₹), payment frequency, benefit type, and repayment obligation status.
+3. **Document Readiness**:
+   - Evaluates applicant's documents against scheme requirements.
+   - Outputs: available documents, missing documents, readiness percentage, and status (`ready` / `partially_ready` / `needs_documents`).
+
+### Context Builder & RAG Pipeline (`app/rag.py`)
+- Aggregates top retrieved chunks from official documents with full citation metadata (Document title, section heading, page number, official PDF link, official portal URL).
+- Synthesizes grounded answers in the requested language (English, Hindi, Marathi, Punjabi, Telugu, Bengali).
+- Seamlessly connects to Gemini API when `GEMINI_API_KEY` is configured, with a high-fidelity deterministic grounded generation fallback.
+
+---
+
+## 3. Quick Start & Execution
+
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Run all 33 automated tests
-python -m pytest -q
+# 2. Run all 41 automated tests
+python -m pytest
 
-# 3. Run NLP & Multilingual Evaluation Benchmark
+# 3. Run Multilingual NLP & RAG Benchmark Evaluation
 python scripts/evaluate_nlp.py
 
-# 4. Load dataset & translations into SQLite dev database
-python -m db.load_sqlite bhasha.db
-
-# 5. Start web server & interactive dashboard
+# 4. Start FastAPI server & Interactive Dashboard
 uvicorn app.main:app --reload
 ```
-Open **`http://localhost:8000`** in your browser to view the interactive web dashboard.
+Open **`http://localhost:8000`** in your browser.
 
-## Key Features
-1. **100 Verified Schemes**: 50 Central Government and 50 State Government schemes (covering Haryana, Maharashtra, Punjab, West Bengal, Telangana, Uttar Pradesh, Rajasthan, Karnataka, Bihar) across all 7 categories:
-   - Education & Scholarships (16 schemes)
-   - Agriculture & Farmers (16 schemes)
-   - Women & Child Welfare (20 schemes)
-   - Business & Entrepreneurship (11 schemes)
-   - Healthcare & Insurance (12 schemes)
-   - Housing & Basic Needs (9 schemes)
-   - Employment, Pension & Social Security (16 schemes)
-2. **6-Language Multilingual Support**: English, Hindi, Marathi, Punjabi, Telugu, and Bengali. Full scheme translations, localized categories, and NFC Unicode normalization.
-3. **10 Interactive Filter Controls**:
-   - Category (7 categories)
-   - Government Level (Central / State)
-   - State / UT (Haryana, Maharashtra, Punjab, West Bengal, Telangana, UP, Rajasthan, Karnataka, Bihar)
-   - Beneficiary (Student, Farmer, Woman, Senior Citizen, Entrepreneur, Artisan)
-   - Age Group (Under 18, 18-25, 26-40, 41-60, 60+)
-   - Family Income ceiling (1L, 1.8L, 2.5L, 5L, 8L)
-   - Social Category (General, SC, ST, OBC, EWS)
-   - Benefit Type (Grant, Subsidy, Loan, Pension, Insurance, Scholarship)
-   - Application Status (Open, Year-round, Seasonal, Closed, Needs verification)
-   - District Filter
-4. **3 Visual Indicators per Scheme**:
-   - **Eligibility Match**: Detailed condition count (e.g. 3/3 matched, 2/3 pending, or ineligible condition)
-   - **Financial Benefit**: ₹ amount, payment frequency, and grant/loan/subsidy indicator
-   - **Document Readiness**: Required documents checklist and pending documents counter
-5. **RAG & Grounded AI Explanations**: Contextual Q&A over official guidelines (`/explain`). Strictly follows the rule: *Rules decide eligibility, never the LLM.*
-6. **High Performance**: Sub-3ms query latency, 97.2% language detection accuracy, 94.6% intent macro-F1, and 91.7% Recall@5.
+---
 
-## Project Structure
-- `app/`:
-  - `main.py`: FastAPI server serving web dashboard (`/`) and REST APIs (`/search`, `/schemes`, `/explain`, `/languages`, `/categories`)
-  - `search.py`: Search engine with tokenization, cross-lingual scoring, 10 filters, and sorting
-  - `eligibility.py`: Deterministic rule engine evaluating eligibility (`any_of`, `between`, `lte`, `gte`, `in`, `eq`)
-  - `language.py`: 6-language script & functional marker detector with NFC normalization
-  - `nlp.py`: Multilingual intent category detection and profile/entity extraction
-  - `i18n.py`: Multilingual translations and localization engine
-  - `rag.py`: Source-grounded explanation engine citing official portals and guidelines
-  - `validate.py`: Data-quality and release validator (`validate` and `validate_strict`)
-  - `static/index.html`: Modern, responsive HTML5 + Tailwind web dashboard
-- `data/`:
-  - `schemes_seed.json`: Canonical dataset of 100 verified schemes
-  - `scheme_translations.json`: 600 translations across 6 languages
-  - `VERIFICATION_LOG.md`: Verification log and source citations for all 100 schemes
-- `db/`:
-  - `schema.sql`: PostgreSQL schema definitions
-  - `load_sqlite.py`: Dev SQLite database loader
-- `tests/`:
-  - `test_core.py`: Baseline NLP and eligibility tests
-  - `test_phase2.py`: Initial schemes and rules tests
-  - `test_phase2d.py`: 40 schemes expansion and strict validation tests
-  - `test_full_project.py`: Complete project tests (100 schemes, 10 filters, RAG, FastAPI)
-  - `test_evaluation_benchmark.py`: NLP evaluation benchmark automated test
-- `scripts/`:
-  - `build_full_dataset.py`: Dataset expansion and validator script
-  - `build_translations.py`: 6-language translations generator
-  - `evaluate_nlp.py`: Multilingual benchmark evaluation suite
+## 4. API Endpoints
+
+- `POST /search`: Multilingual hybrid RAG search with 10 filter controls, sorting, retrieved guideline chunks, and 3 eligibility indicators.
+- `POST /rag/answer`: Full document-based RAG answer generation with official citations and deterministic eligibility evaluation.
+- `POST /rag/retrieve`: Direct hybrid chunk retrieval over official government guideline documents.
+- `POST /eligibility/evaluate`: Deterministic rule evaluation returning the 3 indicators.
+- `GET /rag/stats`: Vector store and document ingestion metrics.
+- `GET /schemes`: Scheme catalog with filters and localization.
+- `GET /schemes/{id}`: Detailed scheme metadata and 6-language translations.
+- `POST /explain`: Grounded explanation for a single scheme with citations.
+- `GET /languages`: Supported 6 Indic languages.
+- `GET /categories`: 7 scheme categories taxonomy.
+
+---
+
+## 5. Evaluation Benchmark Results
+
+Ran across 36 ground-truth multilingual queries covering all 6 languages and 7 categories:
+- **Language Detection Accuracy**: 97.22%
+- **Intent / Category Detection Macro-F1**: 94.55%
+- **NER / Profile Extraction Accuracy**: 95.00%
+- **Hybrid Search Recall@5**: 100.00%
+- **Search Precision@5**: 87.36%
+- **Official Citation Coverage**: 100.00%
+- **Average Latency per Query**: 9.89 ms

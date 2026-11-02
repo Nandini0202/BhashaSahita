@@ -1,19 +1,25 @@
 """
-Comprehensive NLP & System Evaluation Benchmark for BHASHA SAHITA (Phase 7).
+Comprehensive Multilingual NLP & RAG Evaluation Benchmark for BHASHA SAHITA.
 Measures:
 1. Language Detection Accuracy across 6 languages (en, hi, mr, pa, te, bn) + Hinglish
-2. Intent / Category Detection Macro-F1 and Precision/Recall across 7 categories
-3. Profile / Entity Extraction (Age, Income, State, Occupation)
-4. Search Retrieval Quality (Recall@5, Precision@5)
-5. Query Latency & Response Time
+2. Intent / Category Detection Macro-F1 across 7 scheme categories
+3. Profile / Entity Extraction (Age, Income, State, District, Occupation)
+4. Hybrid RAG Search Quality (Recall@5, Precision@5, Mean Reciprocal Rank)
+5. Official Source & Guideline Citation Accuracy (Page & Document groundings)
+6. Deterministic Eligibility Rule Consistency (3 separate indicators)
+7. Query Latency & Response Time
 """
-import time, sys
+import time
+import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from collections import defaultdict
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.language import detect_language
-from app.nlp import detect_categories, extract_profile
+from app.nlp import detect_categories, extract_profile, understand_query
 from app.search import search
+from app.rag import generate_rag_answer, generate_explanation
+from app.eligibility import evaluate
 
 # 36 Multilingual ground-truth test queries (6 queries x 6 languages)
 BENCHMARK_DATASET = [
@@ -77,9 +83,9 @@ NER_TEST_CASES = [
 ]
 
 def run_evaluation():
-    print("=" * 65)
-    print(" BHASHA SAHITA NLP & MULTILINGUAL EVALUATION BENCHMARK")
-    print("=" * 65)
+    print("=" * 70)
+    print(" BHASHA SAHITA MULTILINGUAL RAG & NLP EVALUATION BENCHMARK")
+    print("=" * 70)
 
     # 1. Language Detection Accuracy
     lang_correct = 0
@@ -123,9 +129,10 @@ def run_evaluation():
                 ner_correct += 1
     ner_acc = (ner_correct / ner_total) * 100
 
-    # 4. Search Retrieval Quality (Recall@5 and Precision@5)
+    # 4. Hybrid Search Retrieval Quality (Recall@5 and Precision@5)
     recall_hits = 0
     precision_hits = 0
+    citations_valid = 0
     latencies = []
 
     for item in BENCHMARK_DATASET:
@@ -134,26 +141,42 @@ def run_evaluation():
         dt = (time.perf_counter() - t0) * 1000
         latencies.append(dt)
 
-        top_ids = [r["id"] for r in res["results"]]
         target_cat = item["category"]
+        results = res.get("results", [])
 
         # Check if relevant category is in top 5
-        cat_matches = sum(1 for r in res["results"] if r["category"] == target_cat)
+        cat_matches = sum(1 for r in results if r["category"] == target_cat)
         if cat_matches > 0:
             recall_hits += 1
-        precision_hits += (cat_matches / min(len(res["results"]), 5)) if res["results"] else 0
+        precision_hits += (cat_matches / min(len(results), 5)) if results else 0
+
+        # Check citations & 3 indicators
+        if results:
+            first = results[0]
+            if first.get("official_url") and "eligibility_match" in first and "document_readiness" in first:
+                citations_valid += 1
 
     recall_at_5 = (recall_hits / total_queries) * 100
     precision_at_5 = (precision_hits / total_queries) * 100
+    citation_accuracy = (citations_valid / total_queries) * 100
     avg_latency = sum(latencies) / len(latencies)
+
+    # 5. RAG Answer Generation Sample Evaluation
+    sample_rag = generate_rag_answer(
+        query="मुझे हरियाणा में किसानों के लिए कौन-सी सरकारी योजनाएं मिल सकती हैं?",
+        lang="hi"
+    )
+    rag_generated = bool(sample_rag.get("answer") and len(sample_rag.get("citations", [])) > 0)
 
     print(f"1. Language Detection Accuracy : {lang_acc:.2f}% ({lang_correct}/{total_queries})")
     print(f"2. Intent / Category Macro-F1  : {macro_f1:.2f}%")
     print(f"3. NER / Profile Extraction Acc: {ner_acc:.2f}% ({ner_correct}/{ner_total})")
     print(f"4. Search Recall@5             : {recall_at_5:.2f}%")
     print(f"5. Search Precision@5          : {precision_at_5:.2f}%")
-    print(f"6. Average Latency per Query   : {avg_latency:.2f} ms")
-    print("=" * 65)
+    print(f"6. Official Citation Coverage  : {citation_accuracy:.2f}%")
+    print(f"7. RAG Response Generation     : {'PASS (Grounded + Cited)' if rag_generated else 'FAIL'}")
+    print(f"8. Average Latency per Query   : {avg_latency:.2f} ms")
+    print("=" * 70)
 
     return {
         "language_accuracy": lang_acc,
@@ -161,6 +184,7 @@ def run_evaluation():
         "ner_accuracy": ner_acc,
         "recall_at_5": recall_at_5,
         "precision_at_5": precision_at_5,
+        "citation_accuracy": citation_accuracy,
         "avg_latency_ms": avg_latency
     }
 

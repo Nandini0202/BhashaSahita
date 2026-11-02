@@ -1,9 +1,18 @@
 """
-Multilingual intent (category) detection + entity/profile extraction for BHASHA SAHITA.
+Multilingual Query Understanding & Profile Extraction for BHASHA SAHITA.
 Supports English, Hindi, Marathi, Punjabi, Telugu, and Bengali with Unicode NFC normalization.
+Identifies:
+- Language
+- Intent & 7 Scheme Categories
+- Beneficiary & Occupation
+- State & District
+- Demographics: Age, Income, Gender, Social Category, Residence, Disability
+- Available Documents Mentioned
 """
 import re
 import unicodedata
+from typing import Dict, Any, List, Optional
+from .language import detect_language
 
 CATEGORY_LEXICON = {
     "education": [
@@ -91,7 +100,6 @@ CATEGORY_LEXICON = {
     ]
 }
 
-# State dictionary across all 6 languages
 STATES = {
     "haryana": "Haryana", "हरियाणा": "Haryana", "ਹਰਿਆਣਾ": "Haryana", "హర్యానా": "Haryana", "হরিয়ানা": "Haryana",
     "maharashtra": "Maharashtra", "महाराष्ट्र": "Maharashtra", "ਮਹਾਰਾਸ਼ਟਰ": "Maharashtra", "మహారాష్ట్ర": "Maharashtra", "মহারাষ্ট্র": "Maharashtra",
@@ -103,6 +111,21 @@ STATES = {
     "rajasthan": "Rajasthan", "राजस्थान": "Rajasthan", "ਰਾਜਸਥਾਨ": "Rajasthan", "రాజస్థాన్": "Rajasthan", "রাজস্থান": "Rajasthan",
     "karnataka": "Karnataka", "कर्नाटक": "Karnataka", "ਕਰਨਾਟਕ": "Karnataka", "కర్ణాటక": "Karnataka", "কর্ণাটক": "Karnataka",
     "bihar": "Bihar", "बिहार": "Bihar", "ਬਿਹਾਰ": "Bihar", "బీహార్": "Bihar", "বিহার": "Bihar"
+}
+
+DISTRICTS = {
+    "rewari": "Rewari", "रेवाड़ी": "Rewari", "ਰੇਵਾੜੀ": "Rewari",
+    "ambala": "Ambala", "अम्बाला": "Ambala", "ਅੰਬਾਲਾ": "Ambala",
+    "hisar": "Hisar", "हिसार": "Hisar", "ਹਿਸਾਰ": "Hisar",
+    "gurgaon": "Gurugram", "gurugram": "Gurugram", "गुरुग्राम": "Gurugram",
+    "pune": "Pune", "पुणे": "Pune",
+    "nagpur": "Nagpur", "नागपूर": "Nagpur",
+    "amritsar": "Amritsar", "अमृतसर": "Amritsar", "ਅੰਮ੍ਰਿਤਸਰ": "Amritsar",
+    "ludhiana": "Ludhiana", "लुधियाना": "Ludhiana", "ਲੁਧਿਆਣਾ": "Ludhiana",
+    "kolkata": "Kolkata", "कोलकाता": "Kolkata", "কলকাতা": "Kolkata",
+    "burdwan": "Bardhaman", "bardhaman": "Bardhaman", "বর্ধমান": "Bardhaman",
+    "hyderabad": "Hyderabad", "हैदराबाद": "Hyderabad", "హైదరాబాద్": "Hyderabad",
+    "warangal": "Warangal", "वारंगल": "Warangal", "వరంగల్": "Warangal"
 }
 
 OCCUPATION = {
@@ -127,13 +150,21 @@ GENDER = {
 
 SOCIAL_CATEGORIES = {
     "SC": ["sc", "scheduled caste", "अनुसूचित जाति", "दलित", "ਐੱਸ ਸੀ", "షెడ్యూల్డ్ కులం", "তফসিলি জাতি"],
-    "ST": ["st", "scheduled tribe", "अनुसूचित जनजाति", "आदिवासी", "ਐੱਸ ਟੀ", "షెడ్యూల్డ్ తెగ", "তফসিলি উপজাতি"],
+    "ST": ["st", "scheduled tribe", "अनुसूचित जनजाति", "आदिवासी", "ਐੱਸ ਟੀ", "షెడ్యూల్డ్ తెగ", "তফসিলি उपজাতি"],
     "OBC": ["obc", "other backward class", "पिछड़ा वर्ग", "अन्य पिछड़ा वर्ग", "मागासवर्गीय", "ਓ ਬੀ ਸੀ", "వెనుకబడిన తరగతి", "অনগ্রসর শ্রেণি"],
     "EWS": ["ews", "economically weaker section", "आर्थिक रूप से कमजोर", "ఆర్థికంగా బలహీన"],
     "General": ["general", "सामान्य", "ਜਨਰਲ", "జనరల్", "সাধারণ"]
 }
 
-# Common stopwords in all 6 languages to eliminate false query matching
+DOCUMENT_PATTERNS = {
+    "Aadhaar Card": ["aadhaar", "आधार", "ਆਧਾਰ", "ఆధార్", "আধার"],
+    "Ration Card": ["ration card", "राशन कार्ड", "रेशन कार्ड", "ਰਾਸ਼ਨ ਕਾਰਡ", "రేషన్ కార్డు", "রেশন কার্ড"],
+    "Income Certificate": ["income cert", "आय प्रमाण", "उत्पन्न दाखला", "ਆਮਦਨ ਸਰਟੀਫਿਕੇਟ", "ఆదాయ ధృవీకరణ", "আয় সার্টিফিকেট"],
+    "Caste Certificate": ["caste cert", "जाति प्रमाण", "जातीचा दाखला", "ਜਾਤੀ ਸਰਟੀਫਿਕੇਟ", "కుల ధృవీకరణ", "জাতি সার্টিফিকেট"],
+    "Bank Passbook": ["bank passbook", "बैंक खाता", "पासबुक", "ਬੈਂਕ ਪਾਸਬੁੱਕ", "బ్యాంక్ పాస్‌బుక్", "ব্যাঙ্ক পাসবই"],
+    "Land Ownership / Jamabandi": ["land record", "jamabandi", "7/12", "सातबारा", "जमीन", "భూమి రికార్డు", "খতিয়ান"]
+}
+
 STOPWORDS = {
     # English
     "a", "an", "the", "in", "on", "of", "for", "to", "at", "by", "from", "with", "is", "are", "i", "need", "want", "help",
@@ -157,6 +188,7 @@ def normalize_text(text: str) -> str:
     return text.strip()
 
 def detect_categories(text: str) -> dict:
+    """Calculates category scores based on multilingual lexicon match."""
     t = normalize_text(text).lower()
     scores = {}
     for c, terms in CATEGORY_LEXICON.items():
@@ -170,6 +202,7 @@ def detect_categories(text: str) -> dict:
     return {c: s for c, s in sorted(scores.items(), key=lambda x: -x[1])}
 
 def extract_profile(text: str) -> dict:
+    """Extracts demographic entities and profile attributes from user query."""
     t = normalize_text(text).lower()
     p = {}
 
@@ -198,6 +231,13 @@ def extract_profile(text: str) -> dict:
         k_nfc = unicodedata.normalize("NFC", k).lower()
         if k_nfc in t:
             p["state"] = v
+            break
+
+    # 3b. District extraction
+    for k, v in DISTRICTS.items():
+        k_nfc = unicodedata.normalize("NFC", k).lower()
+        if k_nfc in t:
+            p["district"] = v
             break
 
     # 4. Occupation extraction
@@ -237,4 +277,48 @@ def extract_profile(text: str) -> dict:
     if any(w in t for w in ["disab", "divyang", "viklang", "handicap", "दिव्यांग", "अपंग", "ਵਿਕਲਾਂਗ", "దివ్యాంగులు", "প্রতিবন্ধী"]):
         p["has_disability"] = True
 
+    # 9. Available documents mentioned
+    docs_found = []
+    for doc_name, keywords in DOCUMENT_PATTERNS.items():
+        for kw in keywords:
+            if kw.lower() in t:
+                docs_found.append(doc_name)
+                break
+    if docs_found:
+        p["documents_available"] = docs_found
+
     return p
+
+def understand_query(query: str, lang: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Full query understanding pipeline:
+    - Language detection
+    - Category & intent detection
+    - Profile / entity extraction (state, district, occupation, age, income, etc.)
+    """
+    detected_lang = lang or detect_language(query)
+    categories = detect_categories(query)
+    profile = extract_profile(query)
+    primary_category = list(categories.keys())[0] if categories else None
+
+    # Determine intent description
+    intent_parts = []
+    if profile.get("state"):
+        intent_parts.append(f"State: {profile['state']}")
+    if profile.get("district"):
+        intent_parts.append(f"District: {profile['district']}")
+    if profile.get("occupation"):
+        intent_parts.append(f"Beneficiary: {profile['occupation']}")
+    if primary_category:
+        intent_parts.append(f"Domain: {primary_category}")
+
+    intent_summary = " + ".join(intent_parts) if intent_parts else "General scheme discovery"
+
+    return {
+        "language": detected_lang,
+        "query": query,
+        "categories": categories,
+        "primary_category": primary_category,
+        "profile": profile,
+        "intent_summary": intent_summary
+    }

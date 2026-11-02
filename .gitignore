@@ -1,5 +1,33 @@
+# Python environments
 .venv/
+venv/
+env/
+
+# Python bytecode and caches
 __pycache__/
-.pytest_cache/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build and test artifacts
+build/
+dist/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Local databases and logs
 bhasha.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Operating-system files
+.DS_Store
+Thumbs.db
