@@ -21,12 +21,14 @@ from .eligibility import evaluate
 from .i18n import get_translation, get_category_label, get_benefit_type_label, get_status_label, get_verdict_label
 from .embeddings.generator import MultilingualEmbeddingGenerator
 from .vector_store.factory import get_vector_store
+from .models.bge_reranker import BGEReranker
 
 DATA_FILE = Path(__file__).parent.parent / "data" / "schemes_seed.json"
 SCHEMES = json.loads(DATA_FILE.read_text(encoding="utf-8"))
 SCHEMES_MAP = {s["id"]: s for s in SCHEMES}
 
 EMBEDDING_GEN = MultilingualEmbeddingGenerator()
+RERANKER = BGEReranker()
 
 
 def _tokens(s: str) -> set:
@@ -276,8 +278,18 @@ def search(
     elif sort_by in ("deadline", "application_end"):
         ranked.sort(key=lambda x: (x[1].get("application_end") is None, x[1].get("application_end") or ""))
     else:
-        # Relevance descending
-        ranked.sort(key=lambda x: -x[0])
+        # Relevance ranking with BGE Cross-Encoder Reranker
+        if query and len(ranked) > 1:
+            ranked.sort(key=lambda x: -x[0])
+            top_candidates = [
+                {"score": item[0], "scheme": item[1], "elig": item[2], "text": f"{item[1]['name_en']} {item[1]['purpose']}"}
+                for item in ranked[:min(len(ranked), top_k * 2)]
+            ]
+            top_cat = list(cats.keys())[0] if cats else None
+            reranked_docs = RERANKER.rerank(query, top_candidates, top_k=top_k, detected_category=top_cat)
+            ranked = [(doc["rerank_score"], doc["scheme"], doc["elig"]) for doc in reranked_docs]
+        else:
+            ranked.sort(key=lambda x: -x[0])
 
     out = []
     for sc, s, elig in ranked[:top_k]:

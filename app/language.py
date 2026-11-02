@@ -1,39 +1,39 @@
 """
-Language detection for BHASHA SAHITA: 6 languages (en, hi, mr, pa, te, bn) + Hinglish.
-Uses Unicode script ranges, NFC normalization, and high-frequency functional marker words.
+Language Detection for BHASHA SAHITA using FastText lid.176 neural model.
+Supports 6 languages: English ('en'), Hindi ('hi'), Marathi ('mr'), Punjabi ('pa'), Telugu ('te'), Bengali ('bn').
 """
+import os
 import re
 import unicodedata
+from pathlib import Path
+import numpy as np
 
-SCRIPTS = {
-    "pa": (0x0A00, 0x0A7F),  # Gurmukhi
-    "bn": (0x0980, 0x09FF),  # Bengali-Assamese
-    "te": (0x0C00, 0x0C7F),  # Telugu
-    "deva": (0x0900, 0x097F) # Devanagari (Hindi / Marathi)
-}
+try:
+    import fasttext
+    # Monkeypatch for NumPy 2.x compatibility in FastText.predict
+    def _patched_predict(self, text, k=1, threshold=0.0, on_unicode_error='strict'):
+        def check(entry):
+            if entry.find('\n') != -1:
+                entry = entry.replace('\n', ' ')
+            return entry + '\n'
+        if isinstance(text, list):
+            text = [check(e) for e in text]
+            return self.f.multilinePredict(text, k, threshold, on_unicode_error)
+        else:
+            text = check(text)
+            predictions = self.f.predict(text, k, threshold, on_unicode_error)
+            if predictions:
+                probs, labels = zip(*predictions)
+            else:
+                probs, labels = ([], ())
+            return labels, np.asarray(probs)
 
-MARATHI_MARKERS = [
-    "मला", "हवी", "हवे", "आहे", "आहेत", "साठी", "आणि", "काय", "माझ", "माझे", "माझी",
-    "ळ", "नाही", "योजना", "मिळेल", "करावे", "शेतकरी", "पाहिजे", "कशी", "कसा"
-]
+    fasttext.FastText._FastText.predict = _patched_predict
+except ImportError:
+    fasttext = None
 
-HINDI_MARKERS = [
-    "मुझे", "चाहिए", "है", "हैं", "के लिए", "और", "क्या", "मेरा", "मेरी", "मेरे",
-    "नहीं", "हूँ", "योजना", "मिलेगा", "मिलेगी", "किसान", "कैसे", "बताओ", "करना"
-]
-
-PUNJABI_MARKERS = [
-    "ਮੈਨੂੰ", "ਚਾਹੀਦੀ", "ਚਾਹੀਦਾ", "ਹੈ", "ਹਨ", "ਲਈ", "ਅਤੇ", "ਕੀ", "ਮੇਰਾ", "ਨਹੀਂ",
-    "ਕਿਸਾਨਾਂ", "ਸਹਾਇਤਾ", "ਯੋਜਨਾ"
-]
-
-TELUGU_MARKERS = [
-    "నాకు", "కావాలి", "ఉంది", "మరియు", "ఏమిటి", "నా", "కాదు", "రైతులకు", "సహాయం", "పథకం"
-]
-
-BENGALI_MARKERS = [
-    "আমার", "দরকার", "চাই", "আছে", "এবং", "কি", "জন্য", "না", "কৃষকদের", "সাহায্য", "প্রকল্প"
-]
+MODEL_PATH = Path(__file__).parent.parent / "data" / "models" / "lid.176.ftz"
+_FASTTEXT_MODEL = None
 
 ROMAN_HINDI = {
     "mujhe", "chahiye", "chahie", "kya", "hai", "hain", "mere", "meri", "mera", "liye",
@@ -41,37 +41,58 @@ ROMAN_HINDI = {
     "kaise", "milega", "chhatravritti", "yojna", "kholna"
 }
 
+def get_fasttext_model():
+    """Lazy-loads FastText lid.176 neural classifier."""
+    global _FASTTEXT_MODEL
+    if _FASTTEXT_MODEL is not None:
+        return _FASTTEXT_MODEL
+
+    if fasttext and MODEL_PATH.exists():
+        try:
+            _FASTTEXT_MODEL = fasttext.load_model(str(MODEL_PATH))
+            return _FASTTEXT_MODEL
+        except Exception:
+            pass
+    return None
+
 def detect_language(text: str) -> str:
-    """Detects primary language: 'en', 'hi', 'mr', 'pa', 'te', 'bn'."""
+    """
+    Detects language using FastText lid.176 pre-trained neural network.
+    Returns: 'en', 'hi', 'mr', 'pa', 'te', 'bn'.
+    """
     if not text:
         return "en"
-    # Normalize unicode to NFC (handles Bengali nuktas, Devanagari composition)
+
     text = unicodedata.normalize("NFC", text)
-    counts = {k: 0 for k in SCRIPTS}
-    latin = 0
+    cleaned = text.strip().replace("\n", " ")
 
-    for ch in text:
-        cp = ord(ch)
-        for k, (lo, hi) in SCRIPTS.items():
-            if lo <= cp <= hi:
-                counts[k] += 1
-        if ch.isascii() and ch.isalpha():
-            latin += 1
-
-    best = max(counts, key=counts.get)
-    if counts[best] > latin and counts[best] > 0:
-        if best != "deva":
-            return best
-        # Disambiguate Devanagari between Marathi and Hindi
-        # Specific Marathi letter: ळ
-        if "ळ" in text:
-            return "mr"
-        mr_score = sum(text.count(w) for w in MARATHI_MARKERS)
-        hi_score = sum(text.count(w) for w in HINDI_MARKERS)
-        return "mr" if mr_score > hi_score else "hi"
-
-    # Check for Romanized Hindi / Hinglish vs English
-    words = set(re.findall(r"[a-z]+", text.lower()))
-    if words & ROMAN_HINDI:
+    # Check Romanized Hindi / Hinglish first
+    words = re.findall(r"\b[a-zA-Z]+\b", cleaned.lower())
+    if words and len(set(words) & ROMAN_HINDI) >= 1:
         return "hi"
+
+    model = get_fasttext_model()
+    if model:
+        try:
+            labels, probs = model.predict(cleaned, k=3)
+            for lbl in labels:
+                code = lbl.replace("__label__", "")
+                if code in ("en", "hi", "mr", "pa", "te", "bn"):
+                    # Marathi vs Hindi disambiguation for short Devanagari strings
+                    if code == "hi" and "ळ" in cleaned:
+                        return "mr"
+                    return code
+        except Exception:
+            pass
+
+    # Heuristic fallback if model not loaded
+    if any("\u0A00" <= c <= "\u0A7F" for c in cleaned):
+        return "pa"
+    if any("\u0980" <= c <= "\u09FF" for c in cleaned):
+        return "bn"
+    if any("\u0C00" <= c <= "\u0C7F" for c in cleaned):
+        return "te"
+    if any("\u0900" <= c <= "\u097F" for c in cleaned):
+        return "mr" if "ळ" in cleaned or "मला" in cleaned or "आहे" in cleaned else "hi"
+
     return "en"

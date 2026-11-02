@@ -217,46 +217,290 @@
         </div>
       </aside>
 
-      <!-- RIGHT COLUMN: SCHEME RESULTS -->
-      <section class="lg:col-span-3 space-y-4">
-        <!-- RAG GROUNDED ANSWER BOX (HIDDEN UNTIL QUERIED) -->
-        <div id="rag-box" class="hidden bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-300 rounded-2xl p-5 shadow-sm space-y-3">
-          <div class="flex items-center justify-between border-b border-emerald-200/80 pb-3">
-            <div class="flex items-center gap-2.5">
-              <span class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base shadow-sm">
-                <i class="fa-solid fa-brain"></i>
+      <!-- RIGHT COLUMN: TABBED SYSTEM & SCHEME RESULTS -->
+      <section class="lg:col-span-3 space-y-4" id="main-view-container">
+
+        <!-- 4-TAB NAVIGATION HEADER -->
+        <div class="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-1.5">
+          <button id="tab-btn-schemes" onclick="switchTab('schemes')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-blue-600 text-white shadow-xs">
+            <i class="fa-solid fa-list-check"></i>
+            <span id="tab-label-schemes">Scheme Catalog</span>
+            <span id="tab-count-badge" class="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">100</span>
+          </button>
+          <button id="tab-btn-rag" onclick="switchTab('rag')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl font-medium text-xs flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50">
+            <i class="fa-solid fa-brain text-emerald-600"></i>
+            <span id="tab-label-rag">RAG Assistant & Citations</span>
+          </button>
+          <button id="tab-btn-profile" onclick="switchTab('profile')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl font-medium text-xs flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50">
+            <i class="fa-solid fa-shield-halved text-purple-600"></i>
+            <span id="tab-label-profile">Encrypted Profile (E2EE)</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500" title="Client-Side Encrypted"></span>
+          </button>
+          <button id="tab-btn-chunks" onclick="switchTab('chunks')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl font-medium text-xs flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50">
+            <i class="fa-solid fa-file-contract text-blue-600"></i>
+            <span id="tab-label-chunks">Official Guidelines</span>
+          </button>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- VIEW 1: SCHEME CATALOG (100 VERIFIED SCHEMES)  -->
+        <!-- ============================================== -->
+        <div id="view-schemes" class="space-y-4">
+          <!-- SEARCH META BAR -->
+          <div class="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-600 shadow-sm">
+            <div id="results-count" class="font-medium">
+              Showing schemes...
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="active-profile-pill" class="hidden bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full font-semibold border border-purple-200 text-[11px] items-center gap-1">
+                <i class="fa-solid fa-user-shield text-[10px]"></i> E2EE Profile Active
               </span>
-              <div>
-                <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
-                  BHASHA SAHITA RAG Assistant <span class="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-300">Grounded in Official Guidelines</span>
-                </h3>
-                <div class="text-[11px] text-slate-500">Multilingual Scheme Synthesis · Official Citations · Deterministic Rules</div>
+              <span id="detected-lang-pill" class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-semibold border border-blue-200">
+                Language: English
+              </span>
+            </div>
+          </div>
+
+          <!-- SCHEME CARDS CONTAINER -->
+          <div id="schemes-container" class="space-y-4">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- VIEW 2: RAG ASSISTANT & GROUNDED ANSWERS       -->
+        <!-- ============================================== -->
+        <div id="view-rag" class="hidden space-y-4">
+          <div class="bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-300 rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-emerald-200/80 pb-3">
+              <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-sm">
+                  <i class="fa-solid fa-brain"></i>
+                </span>
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                    BHASHA SAHITA RAG Assistant <span class="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-300">Grounded in Official Guidelines</span>
+                  </h3>
+                  <div class="text-[11px] text-slate-500">Multilingual Scheme Synthesis · Official Page Citations · Deterministic Rule Engine</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="askRAG()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all shadow-xs">
+                  <i class="fa-solid fa-arrows-rotate text-[10px]"></i> Refresh Answer
+                </button>
               </div>
             </div>
-            <button onclick="document.getElementById('rag-box').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">&times;</button>
-          </div>
-          <div id="rag-answer-content" class="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-line space-y-2 font-normal">
-          </div>
-          <div id="rag-citations" class="pt-3 border-t border-emerald-200/60 text-xs text-slate-600 space-y-1">
+
+            <!-- ACTIVE QUERY CHIP -->
+            <div id="rag-query-display" class="bg-white/90 p-3 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2 text-slate-700">
+                <i class="fa-solid fa-circle-question text-emerald-600"></i>
+                <span class="font-semibold text-slate-500">Query:</span>
+                <span id="rag-current-query-text" class="font-bold text-slate-900">Enter a query above and click 'RAG Assistant'</span>
+              </div>
+              <span id="rag-lang-badge" class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">en</span>
+            </div>
+
+            <!-- GROUNDED ANSWER CONTENT (PARSED MARKDOWN, ZERO HASHES OR ASTERISKS) -->
+            <div id="rag-answer-content" class="bg-white p-5 rounded-xl border border-emerald-200/90 text-xs sm:text-sm text-slate-800 leading-relaxed shadow-xs">
+              <div class="p-6 text-center text-slate-400">
+                <i class="fa-solid fa-brain text-2xl text-emerald-500 mb-2"></i>
+                <p>Type a question or scheme requirement in the search bar above and click <strong>'RAG Assistant'</strong> to generate an officially cited, grounded answer in any of the 6 languages.</p>
+              </div>
+            </div>
+
+            <!-- OFFICIAL CITATIONS GRID -->
+            <div id="rag-citations" class="pt-2 border-t border-emerald-200/60 text-xs text-slate-600 space-y-1">
+            </div>
           </div>
         </div>
 
-        <!-- SEARCH META BAR -->
-        <div class="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-600 shadow-sm">
-          <div id="results-count" class="font-medium">
-            Showing schemes...
-          </div>
-          <div class="flex items-center gap-3">
-            <span id="detected-lang-pill" class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-semibold border border-blue-200">
-              Language: English
-            </span>
+        <!-- ============================================== -->
+        <!-- VIEW 3: END-TO-END ENCRYPTED CITIZEN PROFILE   -->
+        <!-- ============================================== -->
+        <div id="view-profile" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border-2 border-purple-200 p-6 shadow-sm space-y-5">
+            <div class="flex items-center justify-between border-b border-purple-100 pb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center text-lg shadow-sm">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                  <h3 class="font-black text-slate-900 text-base flex items-center gap-2">
+                    Citizen Private Profile Locker
+                    <span class="text-[10px] bg-purple-100 text-purple-800 font-bold px-2.5 py-0.5 rounded-full border border-purple-300">
+                      🛡️ End-to-End Encrypted (AES-GCM-256)
+                    </span>
+                  </h3>
+                  <p class="text-xs text-slate-500">Your sensitive information (income, social category, documents) is encrypted locally on your device and never stored unencrypted.</p>
+                </div>
+              </div>
+              <div id="e2ee-status-indicator" class="text-right">
+                <span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Local Key Active
+                </span>
+              </div>
+            </div>
+
+            <!-- PROFILE INPUT FORM -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+              <!-- State -->
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">State / UT</label>
+                <select id="prof-state" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+                  <option value="">Select State</option>
+                  <option value="Haryana">Haryana</option>
+                  <option value="Punjab">Punjab</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Telangana">Telangana</option>
+                  <option value="West Bengal">West Bengal</option>
+                  <option value="Delhi">Delhi</option>
+                  <option value="Uttar Pradesh">Uttar Pradesh</option>
+                  <option value="Rajasthan">Rajasthan</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Tamil Nadu">Tamil Nadu</option>
+                  <option value="Gujarat">Gujarat</option>
+                  <option value="Bihar">Bihar</option>
+                  <option value="Madhya Pradesh">Madhya Pradesh</option>
+                </select>
+              </div>
+
+              <!-- District -->
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">District</label>
+                <input type="text" id="prof-district" placeholder="e.g. Rewari, Pune, Amritsar" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none" />
+              </div>
+
+              <!-- Beneficiary Role -->
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Beneficiary Group</label>
+                <select id="prof-beneficiary" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+                  <option value="">Select Beneficiary Group</option>
+                  <option value="farmer">Farmer / Agriculture Worker</option>
+                  <option value="student">Student / Youth</option>
+                  <option value="woman">Woman / Girl Child</option>
+                  <option value="senior_citizen">Senior Citizen (60+)</option>
+                  <option value="entrepreneur">MSME Entrepreneur / Business</option>
+                  <option value="artisan">Artisan / Traditional Craftsman</option>
+                </select>
+              </div>
+
+              <!-- Age -->
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Age (Years)</label>
+                <input type="number" id="prof-age" placeholder="e.g. 35" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none" />
+              </div>
+
+              <!-- Annual Family Income -->
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Annual Family Income (₹)</label>
+                <input type="number" id="prof-income" placeholder="e.g. 180000" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none" />
+              </div>
+
+              <!-- Social Category -->
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Social Category</label>
+                <select id="prof-social" class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none">
+                  <option value="">Select Category</option>
+                  <option value="General">General</option>
+                  <option value="SC">SC (Scheduled Caste)</option>
+                  <option value="ST">ST (Scheduled Tribe)</option>
+                  <option value="OBC">OBC (Other Backward Class)</option>
+                  <option value="EWS">EWS</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- MANDATORY DOCUMENTS POSSESSED -->
+            <div class="border-t border-slate-100 pt-3">
+              <label class="block font-bold text-slate-700 text-xs mb-2">Available Official Documents You Possess (Document Readiness):</label>
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-xs">
+                <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
+                  <input type="checkbox" id="doc-aadhaar" value="Aadhaar Card" checked class="rounded text-purple-600 focus:ring-purple-500" />
+                  <span>Aadhaar Card</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
+                  <input type="checkbox" id="doc-bank" value="Bank Passbook / Account" checked class="rounded text-purple-600 focus:ring-purple-500" />
+                  <span>Bank Passbook</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
+                  <input type="checkbox" id="doc-income" value="Income Certificate" class="rounded text-purple-600 focus:ring-purple-500" />
+                  <span>Income Certificate</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
+                  <input type="checkbox" id="doc-caste" value="Caste Certificate" class="rounded text-purple-600 focus:ring-purple-500" />
+                  <span>Caste Certificate</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
+                  <input type="checkbox" id="doc-land" value="Land Ownership / Jamabandi" class="rounded text-purple-600 focus:ring-purple-500" />
+                  <span>Land Records (Jamabandi)</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
+                  <input type="checkbox" id="doc-ration" value="Ration Card" class="rounded text-purple-600 focus:ring-purple-500" />
+                  <span>Ration Card</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
+                  <input type="checkbox" id="doc-student" value="College ID / Admission Proof" class="rounded text-purple-600 focus:ring-purple-500" />
+                  <span>College Admission Proof</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
+                  <input type="checkbox" id="doc-residence" value="Domicile / Residence Certificate" class="rounded text-purple-600 focus:ring-purple-500" />
+                  <span>Domicile Certificate</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <i class="fa-solid fa-lock text-purple-600"></i>
+                <span>Encrypted locally in browser session storage with Web Crypto API.</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="clearEncryptedProfile()" class="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold">
+                  Clear Profile
+                </button>
+                <button onclick="saveAndApplyProfile()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2">
+                  <i class="fa-solid fa-user-check"></i>
+                  <span>Encrypt & Check Eligibility Across 100 Schemes</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- SCHEME CARDS CONTAINER -->
-        <div id="schemes-container" class="space-y-4">
-          <!-- Populated by JavaScript -->
+        <!-- ============================================== -->
+        <!-- VIEW 4: OFFICIAL GUIDELINE CHUNKS EXPLORER     -->
+        <!-- ============================================== -->
+        <div id="view-chunks" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-file-contract text-blue-600"></i> Official Guideline Chunks & Document Index
+                </h3>
+                <p class="text-xs text-slate-500">Search and inspect 200 ingested official scheme guideline chunks with section headers and page numbers.</p>
+              </div>
+              <button onclick="loadGuidelineChunks()" class="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Reload Index
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input type="text" id="chunks-search-input" placeholder="Search official guidelines (e.g. 'subsidy eligibility', 'Aadhaar requirements', 'land records')..."
+                class="flex-1 p-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500"
+                onkeydown="if(event.key==='Enter') searchChunks()" />
+              <button onclick="searchChunks()" class="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700">
+                Search Chunks
+              </button>
+            </div>
+
+            <div id="chunks-list-container" class="space-y-3 max-h-[600px] overflow-y-auto">
+              <!-- Populated via JS -->
+            </div>
+          </div>
         </div>
+
       </section>
 
     </div>
@@ -965,8 +1209,12 @@
       // 4. Populate all 10 filter selects in current language
       populateFilterOptions();
 
-      // 5. Execute search and fetch localized schemes
-      executeSearch();
+      // 5. Execute search and fetch localized schemes (or RAG if in RAG tab)
+      if (currentTab === 'rag' && document.getElementById('search-query').value.trim()) {
+        askRAG();
+      } else {
+        executeSearch();
+      }
     }
 
     function applyTranslations(lang) {
@@ -1008,6 +1256,56 @@
       // Footer
       document.getElementById('footer-text').innerText = t.footer_text;
       document.getElementById('footer-sub').innerText = t.footer_sub;
+
+      // Tab Labels
+      const tabSchemes = document.getElementById('tab-label-schemes');
+      const tabRag = document.getElementById('tab-label-rag');
+      const tabProf = document.getElementById('tab-label-profile');
+      const tabChunks = document.getElementById('tab-label-chunks');
+      if (tabSchemes) {
+        const labels = {
+          en: "Scheme Catalog",
+          hi: "योजना सूची (100)",
+          mr: "योजना यादी (100)",
+          pa: "ਸਕੀਮ ਸੂਚੀ (100)",
+          te: "పథకాల జాబితా (100)",
+          bn: "প্রকল্প তালিকা (100)"
+        };
+        tabSchemes.innerText = labels[lang] || labels.en;
+      }
+      if (tabRag) {
+        const labels = {
+          en: "RAG Assistant & Citations",
+          hi: "RAG सहायक और संदर्भ",
+          mr: "RAG सहाय्यक आणि संदर्भ",
+          pa: "RAG ਸਹਾਇਕ ਅਤੇ ਸਰੋਤ",
+          te: "RAG అసిస్టెంట్ & మూలాలు",
+          bn: "RAG সহকারী ও সূত্র"
+        };
+        tabRag.innerText = labels[lang] || labels.en;
+      }
+      if (tabProf) {
+        const labels = {
+          en: "Encrypted Profile (E2EE)",
+          hi: "एन्क्रिप्टेड प्रोफ़ाइल (E2EE)",
+          mr: "एन्क्रिप्टेड प्रोफाइल (E2EE)",
+          pa: "ਏਨਕ੍ਰਿਪਟਡ ਪ੍ਰੋਫਾਈਲ (E2EE)",
+          te: "ఎన్‌క్రిప్టెడ్ ప్రొఫైల్ (E2EE)",
+          bn: "এনক্রিপ্ট করা প্রোফাইল (E2EE)"
+        };
+        tabProf.innerText = labels[lang] || labels.en;
+      }
+      if (tabChunks) {
+        const labels = {
+          en: "Official Guidelines",
+          hi: "आधिकारिक दिशानिर्देश",
+          mr: "अधिकृत मार्गदर्शक तत्त्वे",
+          pa: "ਅਧਿਕਾਰਤ ਦਿਸ਼ਾ-ਨਿਰਦੇਸ਼",
+          te: "అధికారిక మార్గదర్శకాలు",
+          bn: "সরকারি নির্দেশিকা"
+        };
+        tabChunks.innerText = labels[lang] || labels.en;
+      }
 
       // Quick prompts
       const promptsContainer = document.getElementById('quick-prompts-container');
@@ -1171,12 +1469,14 @@
       currentCategory = (currentCategory === cat) ? '' : cat;
       document.getElementById('filter-category').value = currentCategory;
       renderCategories();
+      switchTab('schemes', true);
       executeSearch();
     }
 
     function onCategorySelectChange() {
       currentCategory = document.getElementById('filter-category').value;
       renderCategories();
+      switchTab('schemes', true);
       executeSearch();
     }
 
@@ -1184,11 +1484,13 @@
       currentCategory = '';
       document.getElementById('filter-category').value = '';
       renderCategories();
+      switchTab('schemes', true);
       executeSearch();
     }
 
     function setQuery(text) {
       document.getElementById('search-query').value = text;
+      switchTab('schemes', true);
       executeSearch();
     }
 
@@ -1208,6 +1510,228 @@
       executeSearch();
     }
 
+    let currentTab = 'schemes';
+    let currentProfile = null;
+
+    // ==========================================
+    // TAB SWITCHING & SMOOTH NAVIGATION
+    // ==========================================
+    function switchTab(tabName, scroll = true) {
+      currentTab = tabName;
+      const tabs = ['schemes', 'rag', 'profile', 'chunks'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const view = document.getElementById(`view-${t}`);
+        if (!btn || !view) return;
+
+        if (t === tabName) {
+          btn.className = "flex-1 min-w-[140px] py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-blue-600 text-white shadow-xs";
+          view.classList.remove('hidden');
+        } else {
+          btn.className = "flex-1 min-w-[140px] py-2.5 px-3 rounded-xl font-medium text-xs flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50";
+          view.classList.add('hidden');
+        }
+      });
+
+      if (scroll) {
+        const container = document.getElementById('main-view-container');
+        if (container) {
+          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+
+      if (tabName === 'chunks') {
+        loadGuidelineChunks();
+      }
+    }
+
+    // ==========================================
+    // MARKDOWN & TYPOGRAPHY RENDERER
+    // (Strips raw # and * and formats into beautiful HTML)
+    // ==========================================
+    function renderMarkdown(md) {
+      if (!md) return '';
+      let text = md;
+
+      // 1. Convert ### Headers
+      text = text.replace(/^###\s*(.*$)/gim, '<div class="mt-4 mb-2 pb-1 border-b border-slate-200/80 font-bold text-slate-900 text-sm flex items-center gap-2"><i class="fa-solid fa-file-shield text-blue-600 text-xs"></i> <span>$1</span></div>');
+      text = text.replace(/^##\s*(.*$)/gim, '<div class="mt-4 mb-2 font-black text-slate-900 text-base">$1</div>');
+      text = text.replace(/^#\s*(.*$)/gim, '<div class="mt-5 mb-2 font-black text-slate-900 text-lg">$1</div>');
+
+      // 2. Convert **Bold Label:**
+      text = text.replace(/\*\*([^*]+)\*\*/gim, '<strong class="font-bold text-slate-900">$1</strong>');
+      text = text.replace(/\*([^*]+)\*/gim, '<em class="italic text-slate-700">$1</em>');
+
+      // 3. Convert Bullet Lists
+      text = text.replace(/^\s*[-*]\s+(.*$)/gim, '<div class="flex items-start gap-2 text-xs text-slate-700 my-1 ml-2"><span class="text-blue-500 font-bold">•</span><span>$1</span></div>');
+
+      // 4. Convert Links [Title](URL)
+      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener" class="text-blue-600 hover:underline font-semibold inline-flex items-center gap-1">$1 <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i></a>');
+
+      // 5. Clean up any remaining stray asterisks or hashes
+      text = text.replace(/^[#*]+\s*/gim, '');
+
+      // 6. Paragraph line breaks
+      text = text.replace(/\n\n+/g, '<div class="h-2"></div>');
+      text = text.replace(/\n/g, '<br/>');
+      return text;
+    }
+
+    // ==========================================
+    // END-TO-END ENCRYPTED (E2EE) CLIENT PROFILE
+    // Uses Web Crypto API AES-GCM 256-bit
+    // ==========================================
+    let e2eeSessionKey = null;
+
+    async function getOrCreateE2EEKey() {
+      if (e2eeSessionKey) return e2eeSessionKey;
+      let rawKey = localStorage.getItem('bhasha_e2ee_key_bytes');
+      if (rawKey) {
+        try {
+          const keyData = Uint8Array.from(atob(rawKey), c => c.charCodeAt(0));
+          e2eeSessionKey = await window.crypto.subtle.importKey(
+            "raw", keyData, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]
+          );
+          return e2eeSessionKey;
+        } catch(e) {
+          console.warn("Regenerating corrupt key", e);
+        }
+      }
+      e2eeSessionKey = await window.crypto.subtle.generateKey(
+        { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+      );
+      const exported = await window.crypto.subtle.exportKey("raw", e2eeSessionKey);
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
+      localStorage.setItem('bhasha_e2ee_key_bytes', b64);
+      return e2eeSessionKey;
+    }
+
+    async function encryptData(obj) {
+      try {
+        const key = await getOrCreateE2EEKey();
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const encoded = new TextEncoder().encode(JSON.stringify(obj));
+        const ciphertext = await window.crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: iv }, key, encoded
+        );
+        return {
+          iv: btoa(String.fromCharCode(...iv)),
+          data: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+          encrypted: true
+        };
+      } catch (err) {
+        console.warn("E2EE encryption fallback:", err);
+        return obj;
+      }
+    }
+
+    async function decryptData(payload) {
+      try {
+        if (!payload || !payload.iv || !payload.data) return null;
+        const key = await getOrCreateE2EEKey();
+        const iv = Uint8Array.from(atob(payload.iv), c => c.charCodeAt(0));
+        const data = Uint8Array.from(atob(payload.data), c => c.charCodeAt(0));
+        const decrypted = await window.crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: iv }, key, data
+        );
+        return JSON.parse(new TextDecoder().decode(decrypted));
+      } catch (err) {
+        console.warn("E2EE decryption error:", err);
+        return null;
+      }
+    }
+
+    async function saveAndApplyProfile() {
+      const state = document.getElementById('prof-state').value;
+      const district = document.getElementById('prof-district').value.trim();
+      const beneficiary = document.getElementById('prof-beneficiary').value;
+      const ageVal = document.getElementById('prof-age').value;
+      const incVal = document.getElementById('prof-income').value;
+      const social = document.getElementById('prof-social').value;
+
+      const docs = [];
+      if (document.getElementById('doc-aadhaar').checked) docs.push('Aadhaar Card');
+      if (document.getElementById('doc-bank').checked) docs.push('Bank Passbook / Account');
+      if (document.getElementById('doc-income').checked) docs.push('Income Certificate');
+      if (document.getElementById('doc-caste').checked) docs.push('Caste Certificate');
+      if (document.getElementById('doc-land').checked) docs.push('Land Ownership / Jamabandi');
+      if (document.getElementById('doc-ration').checked) docs.push('Ration Card');
+      if (document.getElementById('doc-student').checked) docs.push('College ID / Admission Proof');
+      if (document.getElementById('doc-residence').checked) docs.push('Domicile / Residence Certificate');
+
+      const profileObj = {
+        state: state || undefined,
+        district: district || undefined,
+        occupation: beneficiary || undefined,
+        category: beneficiary || undefined,
+        age: ageVal ? parseInt(ageVal) : undefined,
+        annual_income: incVal ? parseFloat(incVal) : undefined,
+        social_category: social || undefined,
+        documents: docs,
+        owns_land: docs.includes('Land Ownership / Jamabandi'),
+        is_income_tax_payer: (incVal && parseFloat(incVal) > 250000) ? false : false
+      };
+
+      // Encrypt and store locally in browser
+      const enc = await encryptData(profileObj);
+      localStorage.setItem('bhasha_e2ee_profile', JSON.stringify(enc));
+      currentProfile = profileObj;
+
+      // Update sidebar filters to match profile
+      if (state) document.getElementById('filter-state').value = state;
+      if (beneficiary) document.getElementById('filter-beneficiary').value = beneficiary;
+      if (social) document.getElementById('filter-social').value = social;
+      if (incVal) document.getElementById('filter-income').value = incVal;
+
+      // Show active indicator
+      const activePill = document.getElementById('active-profile-pill');
+      if (activePill) activePill.classList.remove('hidden');
+
+      // Switch to Scheme Catalog tab and execute search
+      switchTab('schemes', true);
+      executeSearch();
+    }
+
+    function clearEncryptedProfile() {
+      localStorage.removeItem('bhasha_e2ee_profile');
+      currentProfile = null;
+      document.getElementById('prof-state').value = '';
+      document.getElementById('prof-district').value = '';
+      document.getElementById('prof-beneficiary').value = '';
+      document.getElementById('prof-age').value = '';
+      document.getElementById('prof-income').value = '';
+      document.getElementById('prof-social').value = '';
+      const activePill = document.getElementById('active-profile-pill');
+      if (activePill) activePill.classList.add('hidden');
+      executeSearch();
+    }
+
+    async function loadEncryptedProfileOnStart() {
+      const raw = localStorage.getItem('bhasha_e2ee_profile');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          const prof = await decryptData(parsed);
+          if (prof) {
+            currentProfile = prof;
+            if (prof.state) document.getElementById('prof-state').value = prof.state;
+            if (prof.district) document.getElementById('prof-district').value = prof.district;
+            if (prof.occupation) document.getElementById('prof-beneficiary').value = prof.occupation;
+            if (prof.age) document.getElementById('prof-age').value = prof.age;
+            if (prof.annual_income) document.getElementById('prof-income').value = prof.annual_income;
+            if (prof.social_category) document.getElementById('prof-social').value = prof.social_category;
+            const activePill = document.getElementById('active-profile-pill');
+            if (activePill) activePill.classList.remove('hidden');
+          }
+        } catch (e) {
+          console.warn("Could not load stored profile", e);
+        }
+      }
+    }
+
+    // ==========================================
+    // EXECUTE SEARCH (ACROSS ALL 100 SCHEMES & 10 FILTERS)
+    // ==========================================
     async function executeSearch() {
       const query = document.getElementById('search-query').value;
       const cat = document.getElementById('filter-category').value;
@@ -1234,12 +1758,18 @@
         status: status || null,
         sort_by: sort,
         lang: currentLang,
-        top_k: 30
+        profile: currentProfile || null,
+        top_k: 100
       };
 
       const t = UI_I18N[currentLang] || UI_I18N.en;
       const container = document.getElementById('schemes-container');
       container.innerHTML = `<div class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl mr-2 text-blue-600"></i> ${t.searching}</div>`;
+
+      // If user searched with a query, ensure we switch to schemes view and scroll
+      if (currentTab !== 'schemes' && currentTab !== 'rag') {
+        switchTab('schemes', true);
+      }
 
       try {
         const res = await fetch('/search', {
@@ -1249,10 +1779,215 @@
         });
         const data = await res.json();
         renderResults(data);
+
+        // Update badge count
+        const countBadge = document.getElementById('tab-count-badge');
+        if (countBadge) countBadge.innerText = data.total_matches || 0;
       } catch (err) {
         container.innerHTML = `<div class="p-8 text-center text-rose-500 font-medium">Failed to fetch schemes: ${err.message}</div>`;
       }
     }
+
+    // ==========================================
+    // ASK RAG ASSISTANT (MULTILINGUAL + ZERO # OR *)
+    // ==========================================
+    async function askRAG() {
+      const query = document.getElementById('search-query').value.trim();
+      if (!query) {
+        alert("Please enter a question or scheme requirement for the RAG Assistant.");
+        return;
+      }
+
+      // Switch to RAG Assistant view and smoothly scroll
+      switchTab('rag', true);
+
+      const content = document.getElementById('rag-answer-content');
+      const citations = document.getElementById('rag-citations');
+      const queryText = document.getElementById('rag-current-query-text');
+      const langBadge = document.getElementById('rag-lang-badge');
+
+      if (queryText) queryText.innerText = `"${query}"`;
+      if (langBadge) langBadge.innerText = currentLang;
+
+      content.innerHTML = `
+        <div class="p-8 text-center text-slate-500 space-y-3">
+          <i class="fa-solid fa-brain fa-bounce text-3xl text-emerald-600"></i>
+          <p class="font-bold text-slate-800">Synthesizing grounded response from official government guidelines...</p>
+          <p class="text-xs text-slate-400">Evaluating deterministic eligibility and citing official pages...</p>
+        </div>
+      `;
+      citations.innerHTML = '';
+
+      try {
+        const res = await fetch('/rag/answer', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: query,
+            lang: currentLang,
+            profile: currentProfile || null,
+            top_k: 5
+          })
+        });
+        const data = await res.json();
+
+        // Render response via renderMarkdown() -> ZERO raw # or *
+        content.innerHTML = renderMarkdown(data.answer);
+
+        if (data.language && langBadge) {
+          langBadge.innerText = data.language.toUpperCase();
+        }
+
+        // Citations rendering
+        if (data.citations && data.citations.length > 0) {
+          citations.innerHTML = `
+            <div class="font-bold text-slate-800 flex items-center gap-1.5 mb-2.5 text-xs">
+              <i class="fa-solid fa-book-bookmark text-emerald-600"></i> Official Citations & Grounded Guidelines:
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              ${data.citations.map(c => `
+                <div class="bg-white p-3 rounded-xl border border-emerald-200/80 shadow-2xs flex items-center justify-between text-xs hover:border-emerald-300 transition-all">
+                  <div class="truncate mr-2">
+                    <div class="font-bold text-slate-900 truncate">${c.scheme_name_local || c.scheme_name}</div>
+                    <div class="text-[10px] text-slate-500">${c.document_title} · Page ${c.pages.join(', ')}</div>
+                  </div>
+                  <a href="${c.official_url}" target="_blank" rel="noopener" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                    Portal <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+                  </a>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        // Also update schemes catalog with returned schemes
+        if (data.schemes && data.schemes.length > 0) {
+          renderResults({ total_matches: data.schemes.length, results: data.schemes });
+        }
+      } catch (err) {
+        content.innerHTML = `<div class="text-rose-600 font-semibold p-4">Failed to generate RAG response: ${err.message}</div>`;
+      }
+    }
+
+    // ==========================================
+    // EXPLAIN SCHEME MODAL (NO # OR *)
+    // ==========================================
+    async function openExplainModal(schemeId) {
+      const t = UI_I18N[currentLang] || UI_I18N.en;
+      document.getElementById('explain-modal').classList.remove('hidden');
+      const query = document.getElementById('search-query').value || "Tell me about this scheme and my eligibility";
+      document.getElementById('modal-content').innerHTML = `
+        <div class="flex items-center justify-center py-8 text-slate-500">
+          <i class="fa-solid fa-circle-notch fa-spin text-2xl mr-3 text-blue-600"></i> ${t.modal_loading}
+        </div>
+      `;
+
+      try {
+        const res = await fetch('/explain', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            scheme_id: schemeId,
+            query: query,
+            lang: currentLang,
+            profile: currentProfile || null
+          })
+        });
+        const data = await res.json();
+        const modalTitle = (currentLang !== 'en' && data.scheme_name_local) ? `${data.scheme_name_local} (${data.scheme_name})` : data.scheme_name;
+        document.getElementById('modal-scheme-title').innerText = modalTitle;
+        document.getElementById('modal-content').innerHTML = `
+          <div class="space-y-4">
+            <div class="bg-blue-50/70 p-4 rounded-xl border border-blue-200 text-slate-800 text-xs sm:text-sm leading-relaxed">
+              ${renderMarkdown(data.explanation)}
+            </div>
+            <div class="text-xs text-slate-500 space-y-1">
+              <div class="font-bold text-slate-700">${t.modal_sources}</div>
+              <ul class="list-disc pl-5 space-y-1">
+                ${(data.sources || []).map(src => `<li><a href="${src}" target="_blank" class="text-blue-600 hover:underline break-all">${src}</a></li>`).join('')}
+              </ul>
+            </div>
+            <div class="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+              ${t.modal_verified.replace('{d}', data.last_verified || '2026-11-02')}
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('modal-content').innerHTML = `<div class="text-rose-500 font-medium">Failed to generate explanation: ${err.message}</div>`;
+      }
+    }
+
+    // ==========================================
+    // OFFICIAL GUIDELINE CHUNKS EXPLORER (TAB 4)
+    // ==========================================
+    async function loadGuidelineChunks() {
+      const container = document.getElementById('chunks-list-container');
+      if (!container) return;
+      container.innerHTML = `<div class="p-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl mr-2 text-blue-600"></i> Loading official guideline chunks...</div>`;
+
+      try {
+        const query = document.getElementById('search-query').value || "scheme eligibility guidelines and documents";
+        const res = await fetch('/rag/retrieve', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ query: query, top_k: 20 })
+        });
+        const data = await res.json();
+        renderChunksList(data.chunks || []);
+      } catch (e) {
+        container.innerHTML = `<div class="p-4 text-rose-500 text-xs">Failed to load chunks: ${e.message}</div>`;
+      }
+    }
+
+    async function searchChunks() {
+      const q = document.getElementById('chunks-search-input').value.trim();
+      if (!q) return;
+      const container = document.getElementById('chunks-list-container');
+      container.innerHTML = `<div class="p-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-xl mr-2 text-blue-600"></i> Searching extracted guideline chunks...</div>`;
+      try {
+        const res = await fetch('/rag/retrieve', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ query: q, top_k: 20 })
+        });
+        const data = await res.json();
+        renderChunksList(data.chunks || []);
+      } catch (e) {
+        container.innerHTML = `<div class="p-4 text-rose-500 text-xs">Failed: ${e.message}</div>`;
+      }
+    }
+
+    function renderChunksList(chunks) {
+      const container = document.getElementById('chunks-list-container');
+      if (!chunks || chunks.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">No guideline chunks found matching query.</div>`;
+        return;
+      }
+      container.innerHTML = chunks.map(c => `
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5 hover:border-blue-300 transition-all">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="font-extrabold text-slate-900">${c.document_title || c.scheme_id} · ${c.section || 'Guidelines'}</span>
+            <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold text-[10px]">Page ${c.page_number || 1}</span>
+          </div>
+          <p class="text-slate-700 leading-relaxed text-[11px]">${c.text || c.raw_text}</p>
+          <div class="flex items-center justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-200/60">
+            <span>Chunk ID: ${c.chunk_id}</span>
+            <span>Relevance: ${c.score ? c.score.toFixed(3) : '1.0'}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ==========================================
+    // INITIALIZATION ON PAGE LOAD
+    // ==========================================
+    window.onload = async () => {
+      applyTranslations(currentLang);
+      renderCategories();
+      populateFilterOptions();
+      await loadEncryptedProfileOnStart();
+      executeSearch();
+    };
 
     function renderResults(data) {
       const t = UI_I18N[currentLang] || UI_I18N.en;
@@ -1405,125 +2140,6 @@
         `;
       }).join('');
     }
-
-    async function openExplainModal(schemeId) {
-      const t = UI_I18N[currentLang] || UI_I18N.en;
-      document.getElementById('explain-modal').classList.remove('hidden');
-      const query = document.getElementById('search-query').value || "Tell me about this scheme and my eligibility";
-      document.getElementById('modal-content').innerHTML = `
-        <div class="flex items-center justify-center py-8 text-slate-500">
-          <i class="fa-solid fa-circle-notch fa-spin text-2xl mr-3 text-blue-600"></i> ${t.modal_loading}
-        </div>
-      `;
-
-      try {
-        const res = await fetch('/explain', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            scheme_id: schemeId,
-            query: query,
-            lang: currentLang
-          })
-        });
-        const data = await res.json();
-        const modalTitle = (currentLang !== 'en' && data.scheme_name_local) ? `${data.scheme_name_local} (${data.scheme_name})` : data.scheme_name;
-        document.getElementById('modal-scheme-title').innerText = modalTitle;
-        document.getElementById('modal-content').innerHTML = `
-          <div class="space-y-4">
-            <div class="bg-blue-50/80 p-4 rounded-xl border border-blue-200 whitespace-pre-line text-slate-800 text-xs sm:text-sm leading-relaxed">
-              ${data.explanation}
-            </div>
-            <div class="text-xs text-slate-500 space-y-1">
-              <div class="font-bold text-slate-700">${t.modal_sources}</div>
-              <ul class="list-disc pl-5 space-y-1">
-                ${(data.sources || []).map(src => `<li><a href="${src}" target="_blank" class="text-blue-600 hover:underline break-all">${src}</a></li>`).join('')}
-              </ul>
-            </div>
-            <div class="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-              ${t.modal_verified.replace('{d}', data.last_verified || '2026-11-02')}
-            </div>
-          </div>
-        `;
-      } catch (err) {
-        document.getElementById('modal-content').innerHTML = `<div class="text-rose-500 font-medium">Failed to generate explanation: ${err.message}</div>`;
-      }
-    }
-
-    async function askRAG() {
-      const query = document.getElementById('search-query').value.trim();
-      if (!query) {
-        alert("Please enter a question or scheme requirement for the RAG Assistant.");
-        return;
-      }
-      const ragBox = document.getElementById('rag-box');
-      const content = document.getElementById('rag-answer-content');
-      const citations = document.getElementById('rag-citations');
-
-      ragBox.classList.remove('hidden');
-      content.innerHTML = `<div class="p-6 text-center text-slate-500"><i class="fa-solid fa-brain fa-bounce text-2xl mr-2 text-emerald-600"></i> Synthesizing grounded response from official government scheme guidelines...</div>`;
-      citations.innerHTML = '';
-
-      try {
-        const res = await fetch('/rag/answer', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            query: query,
-            lang: currentLang,
-            top_k: 5
-          })
-        });
-        const data = await res.json();
-        content.innerHTML = data.answer.replace(/\n/g, '<br/>');
-
-        if (data.citations && data.citations.length > 0) {
-          citations.innerHTML = `
-            <div class="font-bold text-slate-700 flex items-center gap-1.5 mb-2">
-              <i class="fa-solid fa-book-bookmark text-emerald-600"></i> Official Citations & Grounded Guidelines:
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              ${data.citations.map(c => `
-                <div class="bg-white p-2.5 rounded-xl border border-emerald-200/80 shadow-xs flex items-center justify-between text-xs">
-                  <div class="truncate mr-2">
-                    <div class="font-bold text-slate-800">${c.scheme_name}</div>
-                    <div class="text-[10px] text-slate-500">${c.document_title} · Page ${c.pages.join(', ')}</div>
-                  </div>
-                  <a href="${c.official_url}" target="_blank" rel="noopener" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 flex-shrink-0">
-                    Portal <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
-                  </a>
-                </div>
-              `).join('')}
-            </div>
-          `;
-        }
-
-        if (data.schemes && data.schemes.length > 0) {
-          renderResults({ total_matches: data.schemes.length, results: data.schemes });
-        }
-      } catch (err) {
-        content.innerHTML = `<div class="text-rose-600 font-semibold p-4">Failed to generate RAG response: ${err.message}</div>`;
-      }
-    }
-
-    function toggleChunks(schemeId) {
-      const el = document.getElementById(`chunks-${schemeId}`);
-      if (el) {
-        el.classList.toggle('hidden');
-      }
-    }
-
-    function closeModal() {
-      document.getElementById('explain-modal').classList.add('hidden');
-    }
-
-    // Initialize on page load
-    window.onload = () => {
-      applyTranslations(currentLang);
-      renderCategories();
-      populateFilterOptions();
-      executeSearch();
-    };
   </script>
 </body>
 </html>

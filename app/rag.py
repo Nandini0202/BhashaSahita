@@ -12,6 +12,7 @@ Pipeline:
 6. Multilingual answer generation with official portal & PDF references
 """
 import os
+import re
 import json
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -105,7 +106,11 @@ def generate_rag_answer(
     5. Generates grounded multilingual response
     """
     u_info = understand_query(query, lang=lang)
-    target_lang = lang or u_info["language"]
+    has_indic_script = bool(re.search(r"[\u0900-\u0D7F]", query))
+    if has_indic_script:
+        target_lang = u_info.get("language") or lang or "hi"
+    else:
+        target_lang = lang or u_info.get("language") or "en"
 
     merged_profile = {**u_info["profile"], **(profile or {})}
 
@@ -232,6 +237,8 @@ def _generate_deterministic_multilingual_answer(
     for idx, s in enumerate(schemes, 1):
         sname = s.get("name_local") or s["name"]
         sid = s["id"]
+        en_name = s.get("name_en") or s.get("name") or sid
+        header_title = f"{sname} ({en_name})" if (lang != "en" and sname != en_name) else sname
         level = s.get("level", "Central")
         state = s.get("state") or "Central"
         purp = s.get("simplified_text") or s.get("purpose_local") or s["purpose"]
@@ -255,7 +262,7 @@ def _generate_deterministic_multilingual_answer(
 
         if lang == "hi":
             lines.extend([
-                f"### {idx}. {sname} ({sid}) - {level} योजना ({state})",
+                f"### {idx}. {header_title} ({sid}) - {level} योजना ({state})",
                 f"**उद्देश्य:** {purp}",
                 f"**1. पात्रता स्थिति:** {vlabel} ({elig.get('matched', 0)}/{elig.get('total', 0)} शर्तें पूरी).",
                 f"**2. वित्तीय लाभ:** {bdisp}",
@@ -265,7 +272,7 @@ def _generate_deterministic_multilingual_answer(
             ])
         elif lang == "mr":
             lines.extend([
-                f"### {idx}. {sname} ({sid}) - {level} योजना ({state})",
+                f"### {idx}. {header_title} ({sid}) - {level} योजना ({state})",
                 f"**उद्देश:** {purp}",
                 f"**1. पात्रता स्थिती:** {vlabel} ({elig.get('matched', 0)}/{elig.get('total', 0)} अटी पूर्ण).",
                 f"**2. आर्थिक लाभ:** {bdisp}",
@@ -275,7 +282,7 @@ def _generate_deterministic_multilingual_answer(
             ])
         elif lang == "pa":
             lines.extend([
-                f"### {idx}. {sname} ({sid}) - {level} ਸਕੀਮ ({state})",
+                f"### {idx}. {header_title} ({sid}) - {level} ਸਕੀਮ ({state})",
                 f"**ਮਕਸਦ:** {purp}",
                 f"**1. ਯੋਗਤਾ ਸਥਿਤੀ:** {vlabel} ({elig.get('matched', 0)}/{elig.get('total', 0)} ਸ਼ਰਤਾਂ ਪੂਰੀਆਂ).",
                 f"**2. ਵਿੱਤੀ ਲਾਭ:** {bdisp}",
@@ -285,7 +292,7 @@ def _generate_deterministic_multilingual_answer(
             ])
         elif lang == "te":
             lines.extend([
-                f"### {idx}. {sname} ({sid}) - {level} పథకం ({state})",
+                f"### {idx}. {header_title} ({sid}) - {level} పథకం ({state})",
                 f"**ఉద్దేశం:** {purp}",
                 f"**1. అర్హత స్థితి:** {vlabel} ({elig.get('matched', 0)}/{elig.get('total', 0)} షరతులు పూర్తయ్యాయి).",
                 f"**2. ఆర్థిక ప్రయోజనం:** {bdisp}",
@@ -295,7 +302,7 @@ def _generate_deterministic_multilingual_answer(
             ])
         elif lang == "bn":
             lines.extend([
-                f"### {idx}. {sname} ({sid}) - {level} প্রকল্প ({state})",
+                f"### {idx}. {header_title} ({sid}) - {level} প্রকল্প ({state})",
                 f"**উদ্দেশ্য:** {purp}",
                 f"**1. যোগ্যতার স্থিতি:** {vlabel} ({elig.get('matched', 0)}/{elig.get('total', 0)} শর্ত পূরণ হয়েছে).",
                 f"**2. আর্থিক সুবিধা:** {bdisp}",
@@ -333,7 +340,13 @@ def generate_explanation(
 
     prof = profile or {}
     elig = evaluate(scheme, prof)
-    tr = get_translation(scheme_id, lang)
+    has_indic_script = bool(re.search(r"[\u0900-\u0D7F]", query))
+    if has_indic_script and lang == "en":
+        u_info = understand_query(query) if query else {"language": "hi"}
+        target_lang = u_info.get("language") or "hi"
+    else:
+        target_lang = lang or "en"
+    tr = get_translation(scheme_id, target_lang)
     localized_name = tr.get("name", scheme["name_en"])
 
     sources = [scheme.get("official_url")]
@@ -374,7 +387,7 @@ def generate_explanation(
     explanation_text = _generate_deterministic_multilingual_answer(
         query=query,
         schemes=single_res,
-        lang=lang,
+        lang=target_lang,
         profile=prof
     )
 
@@ -382,7 +395,7 @@ def generate_explanation(
         "scheme_id": scheme_id,
         "scheme_name": scheme["name_en"],
         "scheme_name_local": localized_name,
-        "language": lang,
+        "language": target_lang,
         "eligibility": elig,
         "eligibility_match": elig.get("eligibility_match"),
         "benefit_details": elig.get("benefit_details"),

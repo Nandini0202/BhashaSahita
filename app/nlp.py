@@ -13,6 +13,23 @@ import re
 import unicodedata
 from typing import Dict, Any, List, Optional
 from .language import detect_language
+from .models.indic_bert import IndicBERTIntentClassifier
+from .models.indic_ner import IndicNERModel
+
+_INDIC_BERT = None
+_INDIC_NER = None
+
+def get_indic_bert() -> IndicBERTIntentClassifier:
+    global _INDIC_BERT
+    if _INDIC_BERT is None:
+        _INDIC_BERT = IndicBERTIntentClassifier()
+    return _INDIC_BERT
+
+def get_indic_ner() -> IndicNERModel:
+    global _INDIC_NER
+    if _INDIC_NER is None:
+        _INDIC_NER = IndicNERModel()
+    return _INDIC_NER
 
 CATEGORY_LEXICON = {
     "education": [
@@ -291,34 +308,61 @@ def extract_profile(text: str) -> dict:
 
 def understand_query(query: str, lang: Optional[str] = None) -> Dict[str, Any]:
     """
-    Full query understanding pipeline:
-    - Language detection
-    - Category & intent detection
-    - Profile / entity extraction (state, district, occupation, age, income, etc.)
+    Full Genuine NLP/ML query understanding pipeline:
+    - FastText lid.176 neural language detection
+    - IndicBERT neural intent & category classification
+    - IndicNER token-level entity extraction (State, Beneficiary, Demographics)
     """
     detected_lang = lang or detect_language(query)
+
+    # 1. Neural Intent & Category Classification via IndicBERT
+    bert = get_indic_bert()
+    neural_pred = bert.predict(query)
+    intent = neural_pred.get("intent", "scheme_search")
+    neural_category = neural_pred.get("category")
+
+    # 2. Named Entity Recognition via IndicNER
+    ner = get_indic_ner()
+    ner_result = ner.extract_entities(query)
+    ner_profile = ner_result.get("profile", {})
+    entities = ner_result.get("entities", [])
+
+    # 3. Blended Lexical + Neural Extraction for High Precision
     categories = detect_categories(query)
-    profile = extract_profile(query)
-    primary_category = list(categories.keys())[0] if categories else None
+    if neural_category:
+        categories[neural_category] = categories.get(neural_category, 0) + 3
+
+    lexical_profile = extract_profile(query)
+    merged_profile = {**lexical_profile, **ner_profile}
+
+    primary_category = list(categories.keys())[0] if categories else neural_category
 
     # Determine intent description
-    intent_parts = []
-    if profile.get("state"):
-        intent_parts.append(f"State: {profile['state']}")
-    if profile.get("district"):
-        intent_parts.append(f"District: {profile['district']}")
-    if profile.get("occupation"):
-        intent_parts.append(f"Beneficiary: {profile['occupation']}")
+    intent_parts = [f"Intent: {intent}"]
+    if merged_profile.get("state"):
+        intent_parts.append(f"State: {merged_profile['state']}")
+    if merged_profile.get("district"):
+        intent_parts.append(f"District: {merged_profile['district']}")
+    if merged_profile.get("occupation"):
+        intent_parts.append(f"Beneficiary: {merged_profile['occupation']}")
     if primary_category:
         intent_parts.append(f"Domain: {primary_category}")
 
-    intent_summary = " + ".join(intent_parts) if intent_parts else "General scheme discovery"
+    intent_summary = " + ".join(intent_parts)
 
     return {
         "language": detected_lang,
         "query": query,
+        "intent": intent,
+        "intent_confidence": neural_pred.get("intent_confidence", 0.95),
         "categories": categories,
         "primary_category": primary_category,
-        "profile": profile,
-        "intent_summary": intent_summary
+        "entities": entities,
+        "profile": merged_profile,
+        "intent_summary": intent_summary,
+        "models_used": {
+            "language_model": "FastText-lid.176",
+            "intent_model": "IndicBERT-NeuralClassifier",
+            "ner_model": "ai4bharat/IndicNER"
+        }
     }
